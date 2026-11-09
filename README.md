@@ -34,7 +34,7 @@ assets/              fotos, capturas, video
 
 | Estevan | Marco |
 |---|---|
-| `.ioc` y proyecto base, máquina de estados, actuadores, logger | drivers AHT20/OLED/ADC, tareas de sensores y pantalla, montaje y calibración |
+| `.ioc` y proyecto base, máquina de estados, actuadores, logger | drivers SHT30/OLED/ADC, tareas de sensores y pantalla, montaje y calibración |
 
 Detalle en [[CLAUDE]] y [[propuesta]].
 
@@ -48,7 +48,7 @@ Detalle en [[CLAUDE]] y [[propuesta]].
 
 ## Hardware y conexiones
 
-Suelo → PC0 (ADC) · LDR → PC1 (ADC) · AHT20 + OLED → I2C1 PB6/PB7 · Bomba → PC6 (TIP120) · Buzzer → PC7 · LED RGB → PD12–14 (TIM4 PWM) · UART → PA9/PA10. Tabla completa en [[propuesta]].
+Suelo → PC0 (ADC) · LDR → PC1 (ADC) · SHT30 + OLED → I2C1 PB6/PB7 · Bomba → PC6 (TIP122) · Buzzer → PC7 (módulo, activo en bajo) · LED RGB → PD12–14 (TIM4 PWM) · UART → PA9/PA10. Tabla completa en [[propuesta]].
 
 ---
 
