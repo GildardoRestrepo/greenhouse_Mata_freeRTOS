@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(firmware/*/Drivers/**)",
+      "Write(firmware/*/Drivers/**)",
+      "Edit(firmware/*/Middlewares/**)",
+      "Write(firmware/*/Middlewares/**)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)"
+    ],
+    "ask": [
+      "Edit(firmware/*/*.ioc)",
+      "Write(firmware/*/*.ioc)",
+      "Bash(git push*)"
+    ]
+  }
+}
