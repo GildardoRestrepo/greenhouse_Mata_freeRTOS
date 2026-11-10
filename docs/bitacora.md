@@ -21,7 +21,7 @@ Entradas nuevas **arriba**. Formato: fecha · quién · hecho · pendiente · de
   - Esperas de **55 y 20 ms** en vez de los 50 y 16 ms nominales: `osDelay(n)` puede durar hasta un tick menos que `n`, y leer antes de tiempo da NACK.
   - La humedad se **satura a 0..100 %** en el driver: la fórmula da de −6 % a 119 % y, sin recortar, un invernadero cerrado cerca de la saturación daría lecturas "fuera de rango" y falsas `FAULT_AIR`.
 - **Verificado (solo lógica, en Python):** CRC de los ejemplos de la hoja de datos (`0xDC`→`0x79`, `0x683A`→`0x7C`, `0x4E85`→`0x6B`) y conversiones (`0x683A`→24,68 °C, `0x4E85`→32,33 %). **Sigue sin compilar**: no hay proyecto base.
-- **Pendiente:** probar P13/P14/P20/P24 con el módulo real; anotar el precio del GY-21 en [[bom]].
+- **Pendiente:** probar P13/P14/P20/P24 con el módulo real. La compra completa costó **$59.160** (anotado en [[bom]]; no se desglosó el precio del GY-21).
 - **Problemas:** el SHT30 no se consiguió (sirve para "problema técnico resuelto": el cambio quedó aislado en el driver y dos constantes, sin tocar tipos ni tareas vecinas).
 
 ## 2026-11-10 · MARCO (+ Claude) — BOM reducido: sensor resistivo y bomba simulada con LED
@@ -89,4 +89,4 @@ Decisiones que el agente no tomó solo (2026-11-09). Nada de esto bloquea la int
 4. **Pantallas.** Revisa en la OLED real si te gustan las 3 pantallas y los textos (`task_display.c`); la orientación se cambia con `SSD1306_ROTATE_180`, y si el módulo resulta ser SH1106, `SSD1306_COL_OFFSET = 2`.
 5. **Compilador en este PC.** El agente intentó instalar uno en una carpeta temporal para revisar la sintaxis y el permiso fue denegado. Si instalas STM32CubeIDE aquí, puede compilar en cuanto llegue el proyecto base.
 6. **(2026-11-10) Resistencias de 220 Ω.** Hacen falta cuatro (tres del LED RGB y una del LED de riego) y la lista reducida compra dos: confirmar que ya hay otras dos.
-7. **(2026-11-10) Precio de los jumpers.** La lista no lo trae; el total de $47.150 supone unos $4.800 entre los dos packs.
+7. ~~**(2026-11-10) Precio de los jumpers.**~~ Resuelto: la compra completa costó $59.160.

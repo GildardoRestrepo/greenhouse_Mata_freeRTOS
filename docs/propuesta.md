@@ -62,7 +62,7 @@ Lista reducida del 2026-11-10 (presupuesto ajustado). Links y precios exactos en
 |---|---|---|
 | Analizador lógico 8 canales 24 MHz (clon Saleae, usa PulseView) | Evidencia visual de preempción con pines de traza por tarea | 35.000 |
 
-**Total aproximado:** ≈ 47.000 COP (detalle en [[bom]]), más ST-Link, USB-TTL o analizador si no los tienen.
+**Total pagado:** 59.160 COP (detalle en [[bom]]), más ST-Link, USB-TTL o analizador si no los tienen.
 
 ---
 
