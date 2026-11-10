@@ -9,6 +9,8 @@
 #ifndef APP_CONFIG_H
 #define APP_CONFIG_H
 
+#include <stdint.h>
+
 /* Los timeouts de CMSIS-RTOS van en ticks; el proyecto usa tick de 1 ms. */
 #define APP_MS_TO_TICKS(ms)         ((uint32_t)(ms))
 
@@ -29,7 +31,7 @@
 #define TASK_LOGGER_STACK_WORDS     384U
 
 #define SENSORS_PERIOD_MS           500U    /* periodo de tSensors (osDelayUntil) */
-#define SHT30_EVERY_N_CYCLES        4U      /* SHT30 cada 4 ciclos = 2 s */
+#define HTU21_EVERY_N_CYCLES        4U      /* HTU21 cada 4 ciclos = 2 s */
 #define DISPLAY_PERIOD_MS           250U    /* periodo de tDisplay */
 #define CONTROL_EVENT_TIMEOUT_MS    1000U   /* timeout de tControl esperando qEvents */
 #define STACK_REPORT_MS             10000U  /* cada cuánto reporta cada tarea su pila libre */
@@ -70,10 +72,13 @@
 #define SENSORS_LOG_READINGS        1       /* 1 = log de crudos cada 2 s (calibración, P03) */
 
 /* ======================================================================== */
-/* SHT30                                                                    */
+/* HTU21 (GY-21)                                                            */
 /* ======================================================================== */
-#define SHT30_MEAS_DELAY_MS         20U     /* conversión en alta repetibilidad: máx. 15 ms */
-#define SHT30_I2C_TIMEOUT_MS        10U     /* timeout HAL por transacción (duran < 1 ms) */
+/* Conversión: máx. 50 ms (T, 14 bits) y 16 ms (HR, 12 bits). osDelay(n) puede durar hasta
+   1 tick menos que n, por eso se deja margen: leer antes de tiempo da NACK. */
+#define HTU21_TEMP_DELAY_MS         55U     /* espera tras disparar temperatura */
+#define HTU21_HUM_DELAY_MS          20U     /* espera tras disparar humedad */
+#define HTU21_I2C_TIMEOUT_MS        10U     /* timeout HAL por transacción (duran < 1 ms) */
 
 /* ======================================================================== */
 /* Analógicos (ADC1 de 12 bits: PC0 = suelo IN10, PC1 = LDR IN11)           */

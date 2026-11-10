@@ -4,13 +4,14 @@
  *
  * Cada SENSORS_PERIOD_MS (osDelayUntil, tick absoluto → periodo sin deriva):
  *   1. lee suelo y luz por ADC (promediados);
- *   2. cada SHT30_EVERY_N_CYCLES ciclos lee el SHT30 y valida CRC y rango físico;
+ *   2. cada HTU21_EVERY_N_CYCLES ciclos lee el HTU21 (temperatura y humedad, dos
+ *      medidas separadas) y valida CRC y rango físico;
  *   3. envía EV_READING a qEvents con las lecturas y su valid_mask;
  *   4. si un fallo se confirma, envía además EV_SENSOR_FAULT con su causa
  *      (una vez por fallo, no en cada ciclo).
  *
  * La tarea solo se bloquea en osDelayUntil, en mtxI2C y en el osDelay de la
- * conversión del SHT30 (dentro del driver, con el mutex suelto).
+ * conversión del HTU21 (dentro del driver, con el mutex suelto).
  */
 #include "task_sensors.h"
 
@@ -26,7 +27,7 @@
 #include "app_types.h"
 #include "cmsis_os2.h"
 #include "drv_analog.h"
-#include "drv_sht30.h"
+#include "drv_htu21.h"
 #include "task_logger.h"    /* log_printf */
 
 #define SENSORS_STACK_REPORT_CYCLES     (STACK_REPORT_MS / SENSORS_PERIOD_MS)
@@ -87,13 +88,20 @@ static void sensors_send_fault(fault_tracker_t *t, fault_code_t code)
     }
 }
 
-/* Lee el SHT30 y descarta lo que esté fuera de rango físico. true = lectura buena. */
+/*
+ * Lee temperatura y humedad del HTU21 (dos medidas, ≈ 75 ms en total, bloqueada sin
+ * espera activa) y descarta lo que esté fuera de rango físico. Solo es buena si las
+ * dos medidas lo son: así el par que se publica siempre es del mismo instante.
+ */
 static bool sensors_read_air(air_cache_t *air)
 {
     int16_t temp_cC = 0;
     int16_t hum_cPct = 0;
 
-    if (sht30_read(&temp_cC, &hum_cPct) != SHT30_OK) {
+    if (htu21_read_temp(&temp_cC) != HTU21_OK) {
+        return false;
+    }
+    if (htu21_read_hum(&hum_cPct) != HTU21_OK) {
         return false;
     }
     if ((temp_cC < TEMP_VALID_MIN_cC) || (temp_cC > TEMP_VALID_MAX_cC)
@@ -116,8 +124,8 @@ void StartSensorsTask(void *argument)
     air_cache_t air = {0};
     uint32_t cycle = 0;
 
-    if (sht30_init() != SHT30_OK) {
-        log_printf("SEN SHT30 no responde en el arranque");
+    if (htu21_init() != HTU21_OK) {
+        log_printf("SEN HTU21 no responde en el arranque");
     }
 
     uint32_t next_wake = osKernelGetTickCount();
@@ -139,8 +147,8 @@ void StartSensorsTask(void *argument)
             r->valid_mask |= READ_VALID_LIGHT;
         }
 
-        /* 2) Aire: cada SHT30_EVERY_N_CYCLES ciclos; el resto usa la última lectura buena. */
-        bool air_cycle = ((cycle % SHT30_EVERY_N_CYCLES) == 0U);
+        /* 2) Aire: cada HTU21_EVERY_N_CYCLES ciclos; el resto usa la última lectura buena. */
+        bool air_cycle = ((cycle % HTU21_EVERY_N_CYCLES) == 0U);
         bool air_fault_new = false;
 
         if (air_cycle) {
