@@ -14,7 +14,7 @@
 #include "cmsis_os2.h"
 
 extern osMessageQueueId_t qEventsHandle;    /* 8 × app_event_t → tControl */
-extern osMutexId_t        mtxI2CHandle;     /* bus I2C1 (SHT30 + OLED) */
+extern osMutexId_t        mtxI2CHandle;     /* bus I2C1 (HTU21 + OLED) */
 extern osMutexId_t        mtxDataHandle;    /* g_snapshot */
 
 /**

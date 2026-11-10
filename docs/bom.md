@@ -15,7 +15,7 @@ Detalle técnico de cada componente en [[propuesta]] §2 y §3.
 | Componente | Cant. | Precio unit. | Link |
 |---|---|---|---|
 | Sensor de humedad de suelo YL38/YL69 | 1 | $3.200 | https://ardobot.xyz/sensor-de-humedad-de-suelo-sonda-higrometro-yl38-y-yl69.html |
-| SHT30 | 1 | $20.000 | https://ardobot.xyz/sensor-de-humedad-y-temperatura-sht30.html |
+| HTU21D (módulo GY-21) — reemplaza al SHT30, que no había en tienda | 1 | ya comprado (incluido en el total) | — |
 | OLED 0.96" SSD1306 I2C | 1 | $12.500 | https://ardobot.xyz/display-oled-i2c-128x64-0-96-inch.html |
 | Fotorresistencia LDR 5mm | 1 | $400 | https://ardobot.xyz/fotoresistencia-ldr-5mm.html |
 | Módulo buzzer activo | 1 | $3.000 | https://ardobot.xyz/modulo-buzzer-activo.html |
@@ -25,7 +25,7 @@ Detalle técnico de cada componente en [[propuesta]] §2 y §3.
 | Jumpers M-M 10cm x10 | 1 pack | — | https://ardobot.xyz/cables-jumper-dupont-x-10-macho-macho-10-cm.html |
 | Resistencias 10kΩ, 100kΩ×2, 220Ω×2 | 5 | ≈$1.000 (confirmar en tienda) | — |
 
-**Total ≈ $47.150.**
+**Total pagado: $59.160** (compra real del 2026-11-10, con el GY-21 en lugar del SHT30). La lista original con el SHT30 se había estimado en ≈ $47.150; los precios unitarios de la tabla son los de esa lista.
 
 **Ya tenemos:** protoboard, caja, matera, frasco, árbol de jade, tierra.
 
@@ -36,7 +36,7 @@ Detalle técnico de cada componente en [[propuesta]] §2 y §3.
 | Ítem | Veredicto | Nota |
 |---|---|---|
 | Sensor de suelo YL-38/YL-69 | ⚠️ **cambia el comportamiento** | Es **resistivo**: la sonda YL-69 se corroe si queda enterrada y energizada muchos días; para los días de la demo sirve. Se usa la salida **AO** del módulo YL-38 (la DO no) y se alimenta a **3,3 V**. Lee al revés que un porcentaje: seco o al aire ≈ máximo del ADC, mojado = valor bajo; la calibración de `app_config.h` (`SOIL_RAW_DRY` / `SOIL_RAW_WET`) ya admite ese sentido, hay que medirla (prueba P16). |
-| SHT30 | ⚠️ **verificar en tienda** | La página no aclara si es **módulo** (4 pines VCC/GND/SCL/SDA con pull-ups) o el chip suelto. Solo sirve el módulo. Si es el chip suelto, pedir el "GY-SHT30" o volver al AHT20. |
+| HTU21 / GY-21 | ✅ comprado | Reemplaza al SHT30 (agotado). I²C en **0x40**, dirección fija; el módulo trae pull-ups y se alimenta a 3,3 V. Temperatura y humedad se piden con comandos separados (driver `drv_htu21`). |
 | OLED | ✅ | Usa SSD1306 e I²C, de 3 a 5 V. Al cablear, revisar el orden de VCC y GND en la serigrafía: cambia entre fabricantes, y si se invierte se quema. |
 | LDR 5 mm | ✅ | Reemplaza a la de 12 mm; mismo divisor con 10 kΩ a GND. Calibrar `LIGHT_RAW_DARK` / `LIGHT_RAW_BRIGHT` (prueba P17). |
 | LED indicador "bomba" | ✅ | Un LED rojo del pack con **220 Ω en serie** entre PC6 y GND (≈ 5 mA: sí puede ir directo al pin). Reemplaza a la bomba; el firmware no cambia (mismo pin, mismo pulso con tiempo máximo). |
@@ -45,7 +45,7 @@ Detalle técnico de cada componente en [[propuesta]] §2 y §3.
 | Módulo buzzer | ⚠️ **cambia la conexión** | Trae un transistor **PNP 9012** y se activa **en bajo**. Hay que alimentarlo a **3V3, no a 5 V**: con 5 V, el pin a 3,3 V no lo apaga y sonaría siempre. La página es ambigua sobre si es activo o pasivo; probarlo como dice [[propuesta]] §4 paso 5. |
 | LED RGB | ✅ | Aunque el link dice "anodo-comun", el producto es **cátodo común**, que es el que necesitamos. |
 | Resistencias | ❓ **contar las de 220 Ω** | Hacen falta **cuatro** de 220 Ω (tres del LED RGB y una del LED de riego) y la lista compra dos: confirmar que las otras dos ya están. La de 10 kΩ es el divisor de la LDR; las de 100 kΩ, los pull-down de PC0 y PC1. |
-| Jumpers | ❓ | Sin precio en la lista; el total de $47.150 corresponde a unos $4.800 entre los dos packs. Confirmar en tienda. |
+| Jumpers | ✅ comprados | Sin precio unitario anotado; están incluidos en el total pagado de $59.160. |
 | ST-Link y USB-TTL | ❓ | No están en la lista. Confirmar que ya los tienen: la placa **no** trae USB-serial y sin el adaptador no hay telemetría. |
 | Analizador lógico | ❓ | No está en la lista. La evidencia de preempción se hará por UART con marcas de tiempo (y los LEDs PA6/PA7). Es suficiente para la rúbrica. |
 

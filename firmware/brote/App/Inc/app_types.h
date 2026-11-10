@@ -51,7 +51,7 @@ typedef struct {
 typedef enum {
     FAULT_NONE = 0,
     FAULT_SOIL,         /* sensor de suelo desconectado (ADC < SOIL_RAW_MIN) */
-    FAULT_AIR,          /* SHT30 no responde, CRC inválido o fuera de rango físico */
+    FAULT_AIR,          /* HTU21 no responde, CRC inválido o fuera de rango físico */
     FAULT_ADC,          /* el ADC no convirtió (error o timeout de HAL) */
     FAULT_TIMEOUT,      /* tSensors dejó de reportar (SENSOR_TIMEOUT_MS) */
     FAULT_NO_WATER,     /* MAX_PULSES_NO_RISE pulsos sin subir la humedad */

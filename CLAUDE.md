@@ -33,7 +33,7 @@ assets/                   ← fotos, capturas del analizador lógico, video
 - **Nada de esperas activas.** Si se espera un dato/evento, bloquearse en cola/notificación/semaforo con timeout. Transferencias largas (UART) por DMA + notificación desde el callback.
 - **Desde ISR solo API ISR-safe:** `osMessageQueuePut(q, &x, 0, 0)`, `osThreadFlagsSet`, o `xQueueSendFromISR`/`vTaskNotifyGiveFromISR` + `portYIELD_FROM_ISR`. Las IRQ que llamen al RTOS tienen prioridad NVIC numérica **≥ 5** (`configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY`).
 - **UART tiene un único dueño: `tLogger`.** Cualquier otro módulo que quiera imprimir usa `log_printf()` (encola en `qLog`). Nunca llamar `HAL_UART_Transmit` ni `printf` desde otra tarea.
-- **I2C1 se usa solo con `mtxI2C` tomado** (lo comparten SHT30 y OLED). Tomar → transacción → soltar; nunca dormir con el mutex tomado.
+- **I2C1 se usa solo con `mtxI2C` tomado** (lo comparten HTU21 y OLED). Tomar → transacción → soltar; nunca dormir con el mutex tomado.
 - `g_snapshot` (estado + lecturas) solo se accede con `mtxData` o mediante `shared_get()/shared_set()` en `app_shared.c`.
 - **Solo `tControl` cambia el estado del sistema.** Las demás tareas informan con eventos en `qEvents`; no deciden.
 - **Solo `tActuators` toca bomba, buzzer y LED RGB.** (Desde el 2026-11-10 la "bomba" es un LED indicador en PC6; las reglas no cambian.) La bomba siempre se enciende con tiempo máximo (`PUMP_PULSE_MS`); jamás un "ON" sin timeout.
@@ -43,7 +43,7 @@ assets/                   ← fotos, capturas del analizador lógico, video
 
 ## Estilo de código
 - C11, HAL de ST. Identificadores en **inglés**, comentarios y documentación en **español**.
-- Prefijos por módulo: `sensors_`, `control_`, `act_`, `display_`, `log_`, `sht30_`, `ssd1306_`, `analog_`, `out_`. Tipos `_t`. Constantes y macros en `MAYUSCULAS`. Globales compartidas con prefijo `g_`.
+- Prefijos por módulo: `sensors_`, `control_`, `act_`, `display_`, `log_`, `htu21_`, `ssd1306_`, `analog_`, `out_`. Tipos `_t`. Constantes y macros en `MAYUSCULAS`. Globales compartidas con prefijo `g_`.
 - Toda constante ajustable (umbrales, periodos, calibración) en `App/Inc/app_config.h`, nunca números mágicos dentro de las tareas.
 - Toda función HAL que retorne `HAL_StatusTypeDef` se revisa; los errores se convierten en eventos (`EV_SENSOR_FAULT`) o en logs, no se ignoran.
 - `state_machine.c` sin dependencias de HAL ni RTOS (entradas: estado + evento; salida: nuevo estado + acciones) para poder explicarla y probarla aislada.
@@ -53,14 +53,14 @@ assets/                   ← fotos, capturas del analizador lógico, video
 | Módulo | Dueño principal |
 |---|---|
 | `.ioc`, `Core/`, `task_control.c`, `state_machine.c`, `task_actuators.c`, `task_logger.c`, `drv_outputs.c` | Estevan |
-| `drv_sht30.c`, `drv_ssd1306.c`, `drv_analog.c`, `task_sensors.c`, `task_display.c`, fuentes | Marco |
+| `drv_htu21.c`, `drv_ssd1306.c`, `drv_analog.c`, `task_sensors.c`, `task_display.c`, fuentes | Marco |
 | `app_types.h`, `app_config.h`, `app_shared.*`, `docs/arquitectura.md` | **compartidos**: cambios pequeños y avisados |
 
 El dueño puede delegar. Si necesitas cambiar un archivo del otro, hazlo en tu rama y descríbelo en el PR para que lo revise su dueño.
 
 ## Git y coordinación entre agentes
 - Ramas: `main` siempre compila. Trabajo en `feat/<tema>`, `fix/<tema>`, `docs/<tema>`. PR pequeño hacia `main`; el otro humano (o su agente) revisa.
-- Commits en español, imperativo, con prefijo: `feat(sensors): leer SHT30 cada 2 s`, `fix(i2c): liberar mutex en error`, `cubemx: habilitar DMA en USART1`, `docs: tabla de pilas medidas`.
+- Commits en español, imperativo, con prefijo: `feat(sensors): leer HTU21 cada 2 s`, `fix(i2c): liberar mutex en error`, `cubemx: habilitar DMA en USART1`, `docs: tabla de pilas medidas`.
 - **Antes de empezar a trabajar:** `git pull`, leer `docs/bitacora.md` (últimas entradas) y este archivo.
 - **Al terminar una sesión:** añadir una entrada corta a `docs/bitacora.md`: fecha, quién, qué se hizo, qué quedó pendiente, decisiones tomadas, problemas encontrados (sirven para la sección "problema técnico resuelto" de la demo).
 - Si cambias una interfaz compartida (`app_types.h`, firma de un driver, nombre de cola/mutex), decláralo en la bitácora y en el PR con la palabra **INTERFAZ**.
