@@ -9,9 +9,9 @@ created: 2026-11-08
 | P01 | Arranque y UART | Reset, abrir monitor serie 115200 | Banner + `INIT→MONITOREO` | | |
 | P02 | Bus I²C | Escaneo al arranque | 0x44 (SHT30) y 0x3C (OLED) | | |
 | P03 | Calibración suelo | Sensor en aire / en agua | crudo seco ≈ ?, mojado ≈ ? | | |
-| P04 | Riego automático | Sacar sensor de la tierra | RIEGO, pulsos de 1 s cada 15 s | | |
+| P04 | Riego automático | Sacar la sonda de la tierra | RIEGO, el LED de riego (PC6) da pulsos de 1 s cada 15 s | | |
 | P05 | Fin de riego | Meter sensor en agua | vuelve a MONITOREO | | |
-| P06 | Tanque vacío | Sacar la bomba del agua, suelo seco | 3 pulsos → ALARMA "sin agua" | | |
+| P06 | Riego sin efecto | Dejar la sonda seca durante RIEGO (no hay bomba real: nadie la moja) | 3 pulsos del LED → ALARMA "sin agua" | | |
 | P07 | Sensor desconectado | Desconectar AOUT del sensor de suelo | ALARMA, bomba bloqueada | | |
 | P08 | SHT30 desconectado / CRC inválido | Quitar el módulo | ALARMA "aire" tras 3 fallos | | |
 | P09 | Botones / modos | K_UP, K1, K0 | MANUAL ⇄ MONITOREO, riego manual, cambio de pantalla | | |
@@ -29,7 +29,7 @@ Las líneas `SEN …` salen por UART cada 2 s con `SENSORS_LOG_READINGS = 1` (`a
 | P13 | `drv_sht30`: lectura, CRC y punto fijo | Mirar `T=` y `H=` en el log; echar aliento al sensor; tocarlo con el dedo | `T` plausible (p. ej. `2350` = 23,50 °C), `H` sube varios puntos con el aliento y `T` con el dedo; `m=7`; ningún fallo de CRC | | |
 | P14 | `drv_sht30`: funciones puras | Llamar una vez en el arranque (o en el depurador): `sht30_crc8({0xBE,0xEF},2)`, `sht30_raw_to_temp_cC(0x6666)`, `sht30_raw_to_hum_cPct(0x6666)` | `0x92` (valor de la hoja de datos), `2500`, `4000` | Lógica replicada en Python el 2026-11-09: `0x92`, `2500`, `4000`. Falta en la placa | |
 | P15 | `drv_ssd1306`: init, texto y barras | Encender con la OLED conectada | Sin "nieve" al arrancar; encabezado `BROTE` + estado, línea bajo el encabezado, texto nítido y sin espejo; las barras de Suelo y Luz se llenan en proporción al % | | foto |
-| P16 | `drv_analog`: calibración del suelo | Sensor al aire, luego en un vaso de agua (hasta la línea); anotar el crudo `s=` y ponerlo en `SOIL_RAW_DRY` / `SOIL_RAW_WET` | Tras calibrar: aire ≈ 0 %, agua ≈ 100 %, estable (±2 %) gracias al promedio | | |
+| P16 | `drv_analog`: calibración del suelo | Sonda YL-69 al aire, luego en un vaso de agua; anotar el crudo `s=` y ponerlo en `SOIL_RAW_DRY` / `SOIL_RAW_WET` | Tras calibrar: aire ≈ 0 %, agua ≈ 100 %, estable (±2 %) gracias al promedio | | |
 | P17 | `drv_analog`: LDR | Tapar la LDR con el dedo; alumbrarla con la linterna del celular; anotar `l=` en `LIGHT_RAW_DARK` / `LIGHT_RAW_BRIGHT` | Tapada ≈ 0 %, linterna ≈ 100 % | | |
 | P18 | `drv_analog`: sensor de suelo desconectado | Quitar el cable AOUT (PC0 queda con el pull-down de 100 kΩ) | `s=` < 200, `/-1`, `m` pierde el bit 0 (p. ej. `m=6`); la OLED muestra `--` en Suelo | | |
 | P19 | `tSensors`: periodo y eventos | Log de tControl con el tick de cada `EV_READING` (o pin de traza de tSensors en el analizador) | Un `EV_READING` cada 500 ms ± 1 ms sin deriva; línea `SEN` cada 2 s | | captura |
