@@ -10,7 +10,7 @@
 #include "drv_sht30.h"
 
 #include "app_config.h"
-#include "app_shared.h"       /* mtxI2CHandle */
+#include "app_shared.h"     /* mtxI2CHandle */
 #include "cmsis_os2.h"
 #include "i2c.h"            /* hi2c1 (generado por CubeMX, par .c/.h) */
 
