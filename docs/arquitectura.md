@@ -20,7 +20,7 @@ flowchart LR
   subgraph Entradas
     SOIL[Sensor suelo YL-69<br/>ADC PC0]
     LDR[LDR<br/>ADC PC1]
-    AHT[SHT30<br/>I2C1 0x44]
+    AHT[HTU21<br/>I2C1 0x40]
     BTN[K0 / K1 / K_UP<br/>EXTI]
   end
   subgraph STM32F407 + FreeRTOS
@@ -59,7 +59,7 @@ flowchart LR
 |---|---|---|---|---|---|
 | `tActuators` | Encender/apagar bomba con **tiempo máximo**; patrones de buzzer; color del LED RGB según estado | `osPriorityHigh` | Evento: notificación desde `tControl`. Timeout de la espera = fin del pulso de riego | 128 | GPIO PC6/PC7, TIM4 (solo ella) |
 | `tControl` | Máquina de estados, umbrales con histéresis, detección de errores, decide riego | `osPriorityAboveNormal` | Evento: `qEvents` (lecturas, botones, fin de riego). Timeout 1 s para detectar sensores mudos | 256 | escribe `g_snapshot` (mtxData) |
-| `tSensors` | Leer ADC (suelo, LDR) con promedio, leer SHT30 (con CRC), validar rangos | `osPriorityNormal` | Periódica **500 ms** (`osDelayUntil`); SHT30 cada 4 ciclos (2 s) | 256 | I2C1 (mtxI2C) |
+| `tSensors` | Leer ADC (suelo, LDR) con promedio, leer HTU21 (con CRC), validar rangos | `osPriorityNormal` | Periódica **500 ms** (`osDelayUntil`); HTU21 cada 4 ciclos (2 s) | 256 | I2C1 (mtxI2C) |
 | `tDisplay` | Dibujar pantallas en la OLED | `osPriorityBelowNormal` | Periódica **250 ms** | 384 | I2C1 (mtxI2C), lee `g_snapshot` (mtxData) |
 | `tLogger` | Único escritor de la UART: mensajes y telemetría | `osPriorityLow` | Evento: `qLog` | 384 | USART1 (exclusiva) |
 
@@ -192,7 +192,7 @@ stateDiagram-v2
 |---|---|---|
 | Cable AO del sensor de suelo suelto | ADC < `SOIL_RAW_MIN` (pull-down 100 kΩ lleva el pin a 0) | ALARMA, bomba bloqueada |
 | Sonda YL-69 suelta del módulo YL-38 | No se distingue de "suelo seco": AO sube al máximo | entra a RIEGO y, tras N pulsos sin subir la humedad, ALARMA "sin agua" |
-| SHT30 no responde o CRC inválido | HAL_I2C ≠ HAL_OK o CRC-8 incorrecto, 3 veces seguidas | ALARMA "aire" (el riego puede seguir, decidir) |
+| HTU21 no responde o CRC inválido | HAL_I2C ≠ HAL_OK o CRC-8 incorrecto, 3 veces seguidas | ALARMA "aire" (el riego puede seguir, decidir) |
 | tSensors deja de reportar | `qEvents` vacía > `SENSOR_TIMEOUT_MS` (timeout de la espera) | ALARMA "timeout" |
 | Riego sin efecto (con la bomba simulada: nadie mojó la sonda) | N pulsos sin subir la humedad | ALARMA "sin agua" |
 | Bomba encendida demasiado | timeout propio en tActuators | se apaga sí o sí |
@@ -226,14 +226,14 @@ firmware/brote/                 ← proyecto STM32CubeIDE (nombre provisional)
 │   └── Src/
 │       ├── task_sensors.c  task_control.c  task_actuators.c  task_display.c  task_logger.c
 │       ├── state_machine.c       ← lógica pura de transiciones (sin HAL → fácil de probar)
-│       ├── drv_sht30.c  drv_ssd1306.c  font_6x8.c
+│       ├── drv_htu21.c  drv_ssd1306.c  font_6x8.c
 │       ├── drv_analog.c          ← ADC suelo + LDR, calibración
 │       └── drv_outputs.c         ← LED de riego (bomba), buzzer, RGB, pines de traza
 ├── Drivers/  Middlewares/      ← HAL y FreeRTOS de ST, no se editan
 ```
 
 - Las tareas se declaran en CubeMX con **"Code Generation Option: As weak"**; CubeMX genera `__weak void StartSensorsTask(void *argument)` en `freertos.c` y nosotros damos la definición real en `App/Src/task_sensors.c`. Así el `.ioc` documenta prioridades/pilas y el código vive fuera de lo generado.
-- **Lectura del SHT30:** comando de medida única *sin clock stretching* `0x2400` → **soltar `mtxI2C`** → `osDelay(20)` → tomar mutex → leer 6 bytes (T, CRC, HR, CRC) → soltar. Así no se duerme con el mutex tomado y la OLED puede usar el bus durante la conversión. CRC-8 polinomio 0x31, init 0xFF. Conversión en punto fijo: `temp_cC = -4500 + 17500*raw_t/65535`, `hum_cPct = 10000*raw_h/65535` (usar aritmética de 32 bits).
+- **Lectura del HTU21 (módulo GY-21, 0x40):** temperatura y humedad son **dos medidas separadas**, cada una con el mismo ciclo: comando *no-hold master* (`0xF3` temperatura, `0xF5` humedad) → **soltar `mtxI2C`** → `osDelay` (55 ms para temperatura, 20 ms para humedad; la conversión dura 50 y 16 ms como máximo) → tomar mutex → leer 3 bytes (MSB, LSB, CRC) → soltar. Así no se duerme con el mutex tomado y la OLED puede usar el bus durante la conversión. CRC-8 polinomio 0x31, **init 0x00**. Antes de convertir se enmascaran los 2 bits de estado (`raw & 0xFFFC`). Conversión en punto fijo: `temp_cC = -4685 + 17572*raw/65536`, `hum_cPct = -600 + 12500*raw/65536` (aritmética de 32 bits; la humedad se satura a 0..100 %).
 - **Refresco de la OLED:** el framebuffer (1 KB, `static`) se envía en 8 páginas de 128 bytes; `mtxI2C` se toma y se suelta en **cada página**, así tSensors espera el bus ≈ 3 ms como máximo en vez de los ≈ 24 ms del cuadro completo.
 - Capas: `task_*` (lógica RTOS) → `drv_*` (usa HAL) → HAL. Las tareas no llaman HAL directamente salvo casos triviales.
 

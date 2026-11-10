@@ -8,6 +8,22 @@ Entradas nuevas **arriba**. Formato: fecha · quién · hecho · pendiente · de
 
 ---
 
+## 2026-11-10 · MARCO (+ Claude) — el sensor de aire pasa de SHT30 a HTU21 (GY-21), rama `feat/htu21`
+- **Motivo:** no había SHT30 en la tienda; se compró el **HTU21D en módulo GY-21**.
+- **INTERFAZ (cambian el archivo y las funciones del driver):** `drv_sht30.*` → **`drv_htu21.*`**, prefijo `sht30_` → **`htu21_`**. Ya no existe `sht30_read(&t, &h)`: ahora son `htu21_read_temp(&temp_cC)` y `htu21_read_hum(&hum_cPct)` por separado, más `htu21_init()`. Estados `HTU21_OK / ERR_MUTEX / ERR_BUS / ERR_CRC`. Gildardo: si `task_control.c`, el autotest de INIT o algún documento tuyo nombran `sht30_*` o la dirección 0x44, hay que cambiarlos.
+- **INTERFAZ (`app_config.h`):** `SHT30_EVERY_N_CYCLES` → `HTU21_EVERY_N_CYCLES`; `SHT30_MEAS_DELAY_MS` → `HTU21_TEMP_DELAY_MS` (55) y `HTU21_HUM_DELAY_MS` (20); `SHT30_I2C_TIMEOUT_MS` → `HTU21_I2C_TIMEOUT_MS`. Se añadió `#include <stdint.h>` (nota de Gildardo en el PR #1).
+- **No cambia:** bus I2C1 (PB6/PB7) y `mtxI2C`, `readings_t` (`temp_cC`, `hum_cPct`), `FAULT_AIR`, el contrato de eventos de tSensors y el periodo de 2 s del aire.
+- **Hecho:**
+  - `drv_htu21`: dirección **0x40**; comandos no-hold `0xF3` (temperatura) y `0xF5` (humedad); cada medida hace comando → soltar `mtxI2C` → `osDelay` → tomar → leer 3 bytes; CRC-8 poli 0x31 con **init 0x00**; máscara `raw & 0xFFFC`; `temp_cC = -4685 + 17572*raw/65536`, `hum_cPct = -600 + 12500*raw/65536`.
+  - `task_sensors.c`: dos lecturas seguidas (≈ 75 ms en total, bloqueada sin espera activa); el dato de aire solo vale si las dos salen bien.
+  - `propuesta.md`, `arquitectura.md` (§1, §2, §4, §6), `bom.md`, `pruebas.md` (P02, P08, P13, P14, P20, P24), `README.md` y `CLAUDE.md` al día.
+- **Decisiones:**
+  - Esperas de **55 y 20 ms** en vez de los 50 y 16 ms nominales: `osDelay(n)` puede durar hasta un tick menos que `n`, y leer antes de tiempo da NACK.
+  - La humedad se **satura a 0..100 %** en el driver: la fórmula da de −6 % a 119 % y, sin recortar, un invernadero cerrado cerca de la saturación daría lecturas "fuera de rango" y falsas `FAULT_AIR`.
+- **Verificado (solo lógica, en Python):** CRC de los ejemplos de la hoja de datos (`0xDC`→`0x79`, `0x683A`→`0x7C`, `0x4E85`→`0x6B`) y conversiones (`0x683A`→24,68 °C, `0x4E85`→32,33 %). **Sigue sin compilar**: no hay proyecto base.
+- **Pendiente:** probar P13/P14/P20/P24 con el módulo real; anotar el precio del GY-21 en [[bom]].
+- **Problemas:** el SHT30 no se consiguió (sirve para "problema técnico resuelto": el cambio quedó aislado en el driver y dos constantes, sin tocar tipos ni tareas vecinas).
+
 ## 2026-11-10 · MARCO (+ Claude) — BOM reducido: sensor resistivo y bomba simulada con LED
 - **Motivo:** presupuesto ajustado. La lista pasa de ≈ $120.000 a ≈ $47.150 ([[bom]]).
 - **INTERFAZ (cableado; afecta `task_actuators` / `drv_outputs` de Gildardo):** la **bomba real se reemplaza por un LED indicador en PC6** (LED rojo + 220 Ω a GND, activo en alto). Gildardo **ya aprobó** este cambio. Salen el TIP122, el 1N4007, el condensador, la manguera y la fuente de 5 V. El firmware no cambia: mismo pin, mismos nombres (`CMD_PUMP_PULSE`, `PUMP_PULSE_MS`, `EV_PUMP_DONE`) y mismo pulso con tiempo máximo.

@@ -15,7 +15,7 @@ Detalle técnico de cada componente en [[propuesta]] §2 y §3.
 | Componente | Cant. | Precio unit. | Link |
 |---|---|---|---|
 | Sensor de humedad de suelo YL38/YL69 | 1 | $3.200 | https://ardobot.xyz/sensor-de-humedad-de-suelo-sonda-higrometro-yl38-y-yl69.html |
-| SHT30 | 1 | $20.000 | https://ardobot.xyz/sensor-de-humedad-y-temperatura-sht30.html |
+| HTU21D (módulo GY-21) — reemplaza al SHT30, que no había en tienda | 1 | ya comprado (anotar precio) | — |
 | OLED 0.96" SSD1306 I2C | 1 | $12.500 | https://ardobot.xyz/display-oled-i2c-128x64-0-96-inch.html |
 | Fotorresistencia LDR 5mm | 1 | $400 | https://ardobot.xyz/fotoresistencia-ldr-5mm.html |
 | Módulo buzzer activo | 1 | $3.000 | https://ardobot.xyz/modulo-buzzer-activo.html |
@@ -25,7 +25,7 @@ Detalle técnico de cada componente en [[propuesta]] §2 y §3.
 | Jumpers M-M 10cm x10 | 1 pack | — | https://ardobot.xyz/cables-jumper-dupont-x-10-macho-macho-10-cm.html |
 | Resistencias 10kΩ, 100kΩ×2, 220Ω×2 | 5 | ≈$1.000 (confirmar en tienda) | — |
 
-**Total ≈ $47.150.**
+**Total ≈ $47.150** con la lista original (incluía el SHT30 a $20.000); falta ajustarlo con el precio real del GY-21.
 
 **Ya tenemos:** protoboard, caja, matera, frasco, árbol de jade, tierra.
 
@@ -36,7 +36,7 @@ Detalle técnico de cada componente en [[propuesta]] §2 y §3.
 | Ítem | Veredicto | Nota |
 |---|---|---|
 | Sensor de suelo YL-38/YL-69 | ⚠️ **cambia el comportamiento** | Es **resistivo**: la sonda YL-69 se corroe si queda enterrada y energizada muchos días; para los días de la demo sirve. Se usa la salida **AO** del módulo YL-38 (la DO no) y se alimenta a **3,3 V**. Lee al revés que un porcentaje: seco o al aire ≈ máximo del ADC, mojado = valor bajo; la calibración de `app_config.h` (`SOIL_RAW_DRY` / `SOIL_RAW_WET`) ya admite ese sentido, hay que medirla (prueba P16). |
-| SHT30 | ⚠️ **verificar en tienda** | La página no aclara si es **módulo** (4 pines VCC/GND/SCL/SDA con pull-ups) o el chip suelto. Solo sirve el módulo. Si es el chip suelto, pedir el "GY-SHT30" o volver al AHT20. |
+| HTU21 / GY-21 | ✅ comprado | Reemplaza al SHT30 (agotado). I²C en **0x40**, dirección fija; el módulo trae pull-ups y se alimenta a 3,3 V. Temperatura y humedad se piden con comandos separados (driver `drv_htu21`). |
 | OLED | ✅ | Usa SSD1306 e I²C, de 3 a 5 V. Al cablear, revisar el orden de VCC y GND en la serigrafía: cambia entre fabricantes, y si se invierte se quema. |
 | LDR 5 mm | ✅ | Reemplaza a la de 12 mm; mismo divisor con 10 kΩ a GND. Calibrar `LIGHT_RAW_DARK` / `LIGHT_RAW_BRIGHT` (prueba P17). |
 | LED indicador "bomba" | ✅ | Un LED rojo del pack con **220 Ω en serie** entre PC6 y GND (≈ 5 mA: sí puede ir directo al pin). Reemplaza a la bomba; el firmware no cambia (mismo pin, mismo pulso con tiempo máximo). |

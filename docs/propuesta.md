@@ -38,7 +38,7 @@ Lista reducida del 2026-11-10 (presupuesto ajustado). Links y precios exactos en
 | Componente | Ref. sugerida | Uso | ≈ COP |
 |---|---|---|---|
 | Sensor humedad de suelo **resistivo** | Sonda YL-69 + módulo YL-38 (salida AO) | Humedad del suelo (ADC). Más barato que el capacitivo; la sonda se corroe con el tiempo, suficiente para la demo. | 3.200 |
-| Sensor temp/humedad aire I²C | **SHT30** en módulo con pull-ups (ideal versión con carcasa de malla) | Microclima (I²C, CRC por medida) | 20.000 |
+| Sensor temp/humedad aire I²C | **HTU21D** en módulo **GY-21** (trae pull-ups) | Microclima (I²C, CRC por medida) | ver [[bom]] |
 | Pantalla OLED 0.96" I²C | SSD1306 128×64, **4 pines** (VCC GND SCL SDA) | Interfaz | 12.500 |
 | Fotorresistencia + R 10 kΩ | LDR 5 mm | Luz (ADC) | 400 |
 | LED rojo 5 mm + R 220 Ω | pack ×10 | **Indicador de riego**: representa la bomba en PC6 | 2.000 |
@@ -74,7 +74,7 @@ Pines elegidos para **no chocar** con lo que la placa ya usa (flash SPI1 en PB0/
 |---|---|---|---|---|
 | Sensor suelo YL-69 + módulo YL-38 | AO (la salida DO no se usa) | **PC0** | ADC1_IN10 | **3.3 V** (alimentado a 5 V, AO puede pasar de 3.3 V en el pin). Pull-down de 100 kΩ en PC0 |
 | LDR (divisor con 10 kΩ a GND) | punto medio | **PC1** | ADC1_IN11 | 3.3 V |
-| SHT30 | SCL / SDA | **PB6 / PB7** | I2C1 400 kHz, dir. 0x44 | 3.3 V (el módulo trae pull-ups; ADDR a GND) |
+| HTU21 (GY-21) | SCL / SDA | **PB6 / PB7** | I2C1 400 kHz, dir. 0x40 (fija) | 3.3 V (el módulo trae pull-ups) |
 | OLED SSD1306 | SCL / SDA | **PB6 / PB7** (mismo bus) | I2C1, dir. 0x3C | 3.3 V |
 | LED de riego (representa la bomba) | ánodo; cátodo a GND con R 220 Ω | **PC6** | GPIO salida, activo en alto | 3.3 V, ≈ 5 mA |
 | Módulo buzzer (I/O) | señal | **PC7** | GPIO salida push-pull, **activo en bajo** (inicia en alto) | **VCC del módulo a 3V3**, no a 5 V |
@@ -102,11 +102,11 @@ Si más adelante se monta una **bomba real, nunca directo al pin**: TIP122 con R
 ## 4. Plan de montaje (por etapas, probar cada una antes de seguir)
 
 1. **Placa sola:** CubeMX + blink de PA6 + "hola" por USART1 con el USB-TTL. Confirmar que el ST-Link programa (BOOT0 en 0).
-2. **Bus I²C:** escaneo de direcciones por UART (esperado 0x44 SHT30, 0x3C OLED). Luego texto en la OLED y lectura del SHT30 con verificación de CRC.
+2. **Bus I²C:** escaneo de direcciones por UART (esperado 0x40 HTU21, 0x3C OLED). Luego texto en la OLED y lectura del HTU21 con verificación de CRC.
 3. **Analógicos:** leer PC0/PC1 crudos por UART. **Calibrar** el sensor de suelo: valor en aire (seco = 0 %) y en vaso de agua (100 %); anotar en `app_config.h`. Probar desconexión (con el pull-down de 100 kΩ debe leer ≈0 → error).
 4. **LED de riego:** LED rojo + 220 Ω en PC6, comandado con un botón. Verificar la polaridad (pata larga = ánodo, hacia la resistencia).
 5. **Salidas de estado:** LED RGB por PWM, buzzer. Verificar que el buzzer es **activo**: con VCC a 3V3, poner I/O a GND con un cable → debe sonar un tono continuo. Si solo hace un clic, es pasivo y habría que generar el tono con PWM.
-6. **Integración física:** matera dentro de la caja; sonda YL-69 enterrada en la tierra y su módulo YL-38 afuera, en seco; frasco con agua a mano para mojar la sonda en la demo; LED de riego visible junto a la matera; LDR y SHT30 dentro de la caja a la altura de la planta; OLED y LED RGB en la tapa o frente. Cables por un orificio lateral.
+6. **Integración física:** matera dentro de la caja; sonda YL-69 enterrada en la tierra y su módulo YL-38 afuera, en seco; frasco con agua a mano para mojar la sonda en la demo; LED de riego visible junto a la matera; LDR y HTU21 dentro de la caja a la altura de la planta; OLED y LED RGB en la tapa o frente. Cables por un orificio lateral.
 7. **Pruebas:** ciclo completo de riego, alarmas, 5 min continuos, evidencia de preempción.
 
 > [!warning] Cuidados
@@ -123,7 +123,7 @@ Si más adelante se monta una **bomba real, nunca directo al pin**: TIP122 con R
 | Día | Estevan | Marco |
 |---|---|---|
 | Dom 8 (hoy) | Propuesta, arquitectura, CLAUDE.md, repo | Revisar propuesta, confirmar compras |
-| Lun 9 | Compras. Crear `.ioc` + proyecto base con tareas vacías y subirlo | Drivers SHT30 + SSD1306 (I²C) sobre el proyecto base |
+| Lun 9 | Compras. Crear `.ioc` + proyecto base con tareas vacías y subirlo | Drivers del sensor de aire (hoy HTU21) + SSD1306 (I²C) sobre el proyecto base |
 | Mar 10 | Tareas Control (máquina de estados) + Actuadores + Logger | Tareas Sensores + Display; montaje físico; calibración |
 | Mar 10 noche | Integración, prueba de 5 min, captura de preempción | ídem |
 | Mié 11 | Documento técnico + fotos/video + ensayo de demo | ídem |
