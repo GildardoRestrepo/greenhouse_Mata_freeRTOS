@@ -8,6 +8,18 @@ Entradas nuevas **arriba**. Formato: fecha · quién · hecho · pendiente · de
 
 ---
 
+## 2026-11-10 · MARCO (+ Claude) — BOM reducido: sensor resistivo y bomba simulada con LED
+- **Motivo:** presupuesto ajustado. La lista pasa de ≈ $120.000 a ≈ $47.150 ([[bom]]).
+- **INTERFAZ (cableado; afecta `task_actuators` / `drv_outputs` de Gildardo):** la **bomba real se reemplaza por un LED indicador en PC6** (LED rojo + 220 Ω a GND, activo en alto). Gildardo **ya aprobó** este cambio. Salen el TIP122, el 1N4007, el condensador, la manguera y la fuente de 5 V. El firmware no cambia: mismo pin, mismos nombres (`CMD_PUMP_PULSE`, `PUMP_PULSE_MS`, `EV_PUMP_DONE`) y mismo pulso con tiempo máximo.
+- **INTERFAZ (sensor de suelo; afecta `drv_analog` de Marco):** el capacitivo se reemplaza por el **resistivo YL-69 + módulo YL-38**, salida **AO** a PC0, alimentado a 3,3 V. Lee al revés (seco ≈ máximo del ADC, mojado = bajo); `analog_raw_to_pct()` ya admite ese sentido, pero `SOIL_RAW_DRY`, `SOIL_RAW_WET` y `SOIL_RAW_MIN` de `app_config.h` siguen con valores pensados para el capacitivo y hay que medirlos (P16).
+- **Otros cambios:** LDR de 12 mm → 5 mm; protoboard fuera de la lista (ya la tenemos).
+- **Consecuencias para la demo:**
+  - Sin bomba el suelo no se moja solo: el ciclo de riego se cierra mojando la sonda a mano. Si nadie la moja, tras 3 pulsos hay ALARMA "sin agua" (P06 se reescribió así).
+  - Si la sonda YL-69 se suelta del módulo YL-38, la lectura no se distingue de "suelo seco"; solo se detecta el cable AO suelto (pull-down de 100 kΩ). Queda en la tabla de errores de [[arquitectura]] §4.
+- **Hecho:** `bom.md` reescrito; `propuesta.md` §1–§4, `arquitectura.md` (nota inicial, diagrama, §2, §4, §6) y `pruebas.md` (P04, P06, P16) puestos al día. `CLAUDE.md` en commit aparte (regla de cargas).
+- **Pendiente:** actualizar los comentarios de `app_config.h` y `drv_analog.h` que todavía dicen "capacitivo" (código, va en otra rama); calibrar con el YL-69.
+- **Problemas:** —
+
 ## 2026-11-09 · MARCO (+ Claude) — drivers y tareas de Marco adelantados (rama `feat/drivers-sensores`)
 Todo está en `firmware/brote/App/{Inc,Src}`. **Nada se ha compilado**: no existe todavía el proyecto base ni hay toolchain en el PC de Marco. Solo se verificó en Python la lógica del CRC, las conversiones del SHT30 y el dibujo de la fuente.
 
@@ -60,3 +72,5 @@ Decisiones que el agente no tomó solo (2026-11-09). Nada de esto bloquea la int
 3. **Antirrebote del sensor de suelo.** `SOIL_FAULT_COUNT = 1` (alarma al primer ciclo con el sensor desconectado, como dice §4). Subirlo a 2–3 si en las pruebas aparecen falsas alarmas.
 4. **Pantallas.** Revisa en la OLED real si te gustan las 3 pantallas y los textos (`task_display.c`); la orientación se cambia con `SSD1306_ROTATE_180`, y si el módulo resulta ser SH1106, `SSD1306_COL_OFFSET = 2`.
 5. **Compilador en este PC.** El agente intentó instalar uno en una carpeta temporal para revisar la sintaxis y el permiso fue denegado. Si instalas STM32CubeIDE aquí, puede compilar en cuanto llegue el proyecto base.
+6. **(2026-11-10) Resistencias de 220 Ω.** Hacen falta cuatro (tres del LED RGB y una del LED de riego) y la lista reducida compra dos: confirmar que ya hay otras dos.
+7. **(2026-11-10) Precio de los jumpers.** La lista no lo trae; el total de $47.150 supone unos $4.800 entre los dos packs.

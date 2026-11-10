@@ -8,6 +8,9 @@ estado: borrador — fuente de verdad del diseño de software
 > [!resumen]
 > 5 tareas de aplicación (CMSIS-RTOS v2 sobre FreeRTOS), 5 niveles de prioridad. La tarea **Control** es la única dueña de la máquina de estados y recibe *todo* por una sola cola de eventos. **Actuadores** recibe órdenes por notificación de tarea y corta la bomba por su cuenta aunque Control falle. El bus I²C se protege con un mutex; la UART tiene un único dueño (Logger), así que no lo necesita.
 
+> [!nota] Bomba simulada (2026-11-10)
+> Por presupuesto no hay bomba real: en **PC6 va un LED indicador** (con 220 Ω) que ocupa su lugar. En este documento "bomba" significa ese LED. El software no cambia: mismos nombres (`CMD_PUMP_PULSE`, `PUMP_PULSE_MS`, `EV_PUMP_DONE`), mismo pin y mismo pulso con tiempo máximo. El sensor de suelo es el resistivo **YL-69 + YL-38** (salida AO). Ver [[bom]].
+
 ---
 
 ## 1. Diagrama de bloques
@@ -15,7 +18,7 @@ estado: borrador — fuente de verdad del diseño de software
 ```mermaid
 flowchart LR
   subgraph Entradas
-    SOIL[Sensor suelo<br/>ADC PC0]
+    SOIL[Sensor suelo YL-69<br/>ADC PC0]
     LDR[LDR<br/>ADC PC1]
     AHT[SHT30<br/>I2C1 0x44]
     BTN[K0 / K1 / K_UP<br/>EXTI]
@@ -28,7 +31,7 @@ flowchart LR
     LOG[tLogger]
   end
   subgraph Salidas
-    PUMP[Bomba<br/>PC6 + TIP122]
+    PUMP[LED de riego<br/>PC6, bomba simulada]
     RGB[LED RGB<br/>TIM4 PWM]
     BUZ[Buzzer<br/>PC7 activo bajo]
     OLED[OLED<br/>I2C1]
@@ -63,7 +66,7 @@ flowchart LR
 **5 niveles distintos** (High > AboveNormal > Normal > BelowNormal > Low); el mínimo exigido es 3.
 
 ### Justificación de prioridades (urgencia ↔ consecuencia de llegar tarde)
-- **tActuators — la más alta.** Si apaga tarde la bomba, se inunda la matera. Su trabajo es corto (cambiar un pin), así que no roba CPU. Además corta la bomba por *timeout propio*: aunque Control se cuelgue, la bomba no queda encendida.
+- **tActuators — la más alta.** Con una bomba real, apagar tarde inunda la matera; el LED de riego la representa y se mantiene la misma exigencia de tiempo. Su trabajo es corto (cambiar un pin), así que no roba CPU. Además corta la bomba por *timeout propio*: aunque Control se cuelgue, la bomba no queda encendida.
 - **tControl — alta.** Debe reaccionar a botones y a lecturas en < 50 ms para que la interfaz se sienta inmediata y para mandar el apagado a tiempo. Trabajo acotado (una transición por evento).
 - **tSensors — media.** La humedad del suelo cambia en minutos; un retraso de decenas de ms es irrelevante, pero el periodo debe ser estable para promediar bien.
 - **tDisplay — baja.** Solo estética; si refresca 100 ms tarde nadie lo nota. Es la tarea más larga (≈25 ms de I²C por cuadro), por eso no debe bloquear a las demás.
@@ -156,7 +159,7 @@ stateDiagram-v2
   MONITOREO --> RIEGO: suelo < UMBRAL_SECO
   RIEGO --> RIEGO: pulso + espera de absorción, suelo aún seco
   RIEGO --> MONITOREO: suelo ≥ UMBRAL_HUMEDO
-  RIEGO --> ALARMA: N pulsos sin que suba la humedad (¿tanque vacío?)
+  RIEGO --> ALARMA: N pulsos sin que suba la humedad (riego sin efecto)
   MONITOREO --> MANUAL: K_UP
   MANUAL --> MONITOREO: K_UP
   MANUAL --> MANUAL: K1 = pulso de riego manual
@@ -165,7 +168,7 @@ stateDiagram-v2
   ALARMA --> MONITOREO: K1 (reconocer) y causa resuelta
 ```
 
-| Estado | LED RGB | Buzzer | Bomba |
+| Estado | LED RGB | Buzzer | Bomba (LED PC6) |
 |---|---|---|---|
 | INIT | blanco | 1 bip | off |
 | MONITOREO | verde | — | off |
@@ -178,8 +181,8 @@ stateDiagram-v2
 |---|---|---|---|
 | `SOIL_DRY_PCT` | 15 % | 15 % | entra a RIEGO (el jade se riega con el sustrato casi seco) |
 | `SOIL_WET_PCT` | 35 % | 35 % | sale de RIEGO (histéresis; más alto encharca una suculenta) |
-| `PUMP_PULSE_MS` | 1 000 | 1 000 | ≈30 ml por pulso; tiempo máximo de bomba encendida por pulso |
-| `SOAK_MS` | 15 000 | 30 min | espera para que el agua se absorba (sustrato de cactus drena rápido pero la planta bebe poco) |
+| `PUMP_PULSE_MS` | 1 000 | 1 000 | tiempo máximo del pulso de riego (LED de PC6 encendido; serían ≈30 ml con la bomba real) |
+| `SOAK_MS` | 15 000 | 30 min | espera para que el agua se absorba; en la demo es el tiempo que hay para mojar la sonda a mano |
 | `MAX_PULSES_NO_RISE` | 3 | 3 | → alarma "sin agua" |
 | `SENSOR_TIMEOUT_MS` | 3 000 | 3 000 | sin lecturas → alarma |
 | `TEMP_MAX_cC` | 3500 | 3500 | sobrecalentamiento |
@@ -187,10 +190,11 @@ stateDiagram-v2
 ### Errores previsibles (requisito 4.7)
 | Error | Detección | Reacción |
 |---|---|---|
-| Sensor de suelo desconectado | ADC < `SOIL_RAW_MIN` (pull-down 100 kΩ lleva el pin a 0) | ALARMA, bomba bloqueada |
+| Cable AO del sensor de suelo suelto | ADC < `SOIL_RAW_MIN` (pull-down 100 kΩ lleva el pin a 0) | ALARMA, bomba bloqueada |
+| Sonda YL-69 suelta del módulo YL-38 | No se distingue de "suelo seco": AO sube al máximo | entra a RIEGO y, tras N pulsos sin subir la humedad, ALARMA "sin agua" |
 | SHT30 no responde o CRC inválido | HAL_I2C ≠ HAL_OK o CRC-8 incorrecto, 3 veces seguidas | ALARMA "aire" (el riego puede seguir, decidir) |
 | tSensors deja de reportar | `qEvents` vacía > `SENSOR_TIMEOUT_MS` (timeout de la espera) | ALARMA "timeout" |
-| Tanque vacío / bomba dañada | N pulsos sin subir la humedad | ALARMA "sin agua" |
+| Riego sin efecto (con la bomba simulada: nadie mojó la sonda) | N pulsos sin subir la humedad | ALARMA "sin agua" |
 | Bomba encendida demasiado | timeout propio en tActuators | se apaga sí o sí |
 | Botón con rebote | antirrebote por tiempo en ISR (ignora < 50 ms) + pulsación larga ≥ 1 s | — |
 | Lectura fuera de rango físico | temp < -10 / > 60 °C, HR > 100 % | se descarta, cuenta como fallo |
@@ -224,7 +228,7 @@ firmware/brote/                 ← proyecto STM32CubeIDE (nombre provisional)
 │       ├── state_machine.c       ← lógica pura de transiciones (sin HAL → fácil de probar)
 │       ├── drv_sht30.c  drv_ssd1306.c  font_6x8.c
 │       ├── drv_analog.c          ← ADC suelo + LDR, calibración
-│       └── drv_outputs.c         ← bomba, buzzer, RGB, pines de traza
+│       └── drv_outputs.c         ← LED de riego (bomba), buzzer, RGB, pines de traza
 ├── Drivers/  Middlewares/      ← HAL y FreeRTOS de ST, no se editan
 ```
 

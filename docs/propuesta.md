@@ -6,7 +6,7 @@ estado: borrador para revisar con Marco
 # Propuesta — "Mata": mini-invernadero con riego automático
 
 > [!resumen]
-> Caja transparente con un pequeño árbol de jade (*Crassula ovata*), que mide humedad del suelo, temperatura/humedad del aire y luz; riega sola con una mini-bomba cuando el suelo está seco, muestra todo en una OLED, indica el estado con un LED RGB y avisa fallos con un buzzer. STM32F407VET6 + HAL + FreeRTOS (CMSIS-RTOS v2).
+> Caja transparente con un pequeño árbol de jade (*Crassula ovata*), que mide humedad del suelo, temperatura/humedad del aire y luz; "riega" sola cuando el suelo está seco (por presupuesto la bomba se representa con un **LED indicador en PC6**, ver [[bom]]), muestra todo en una OLED, indica el estado con un LED RGB y avisa fallos con un buzzer. STM32F407VET6 + HAL + FreeRTOS (CMSIS-RTOS v2).
 
 
 ---
@@ -17,14 +17,14 @@ estado: borrador para revisar con Marco
 |---|---|---|
 | 1 | Nombre y objetivo | **Brote**: mantener la humedad del suelo de una planta en un rango objetivo sin intervención humana, y mostrar el microclima del invernadero. |
 | 2 | Usuario y escenario | Persona que cultiva una planta pequeña en interior (escritorio, apartamento) y se ausenta días; o un laboratorio escolar que quiere observar variables de crecimiento. |
-| 3 | Entradas | Humedad de suelo (ADC), luz con LDR (ADC), temperatura y humedad del aire (I²C), 3 botones de la placa (GPIO/EXTI). *Opcional:* flotador de nivel del tanque (GPIO). |
-| 4 | Salidas | Mini-bomba de agua (GPIO + transistor), pantalla OLED (I²C), LED RGB de estado (PWM TIM4), módulo buzzer activo (GPIO, activo en bajo), telemetría por UART al PC. |
+| 3 | Entradas | Humedad de suelo (sonda resistiva YL-69 + módulo YL-38, ADC), luz con LDR (ADC), temperatura y humedad del aire (I²C), 3 botones de la placa (GPIO/EXTI). |
+| 4 | Salidas | LED indicador de riego en PC6 (GPIO; ocupa el lugar de la bomba), pantalla OLED (I²C), LED RGB de estado (PWM TIM4), módulo buzzer activo (GPIO, activo en bajo), telemetría por UART al PC. |
 | 5 | Estados | `INIT` → `MONITOREO` ⇄ `RIEGO`, `MANUAL`, `ALARMA` (ver [[arquitectura]]). |
 | 6 | Periféricos | ADC1, I2C1, TIM4 PWM, USART1 (+DMA), GPIO/EXTI, TIM6 como timebase HAL. |
 | 7 | Tareas FreeRTOS | 5 tareas, 5 niveles de prioridad, colas + notificaciones + mutex (ver [[arquitectura]]). |
-| 8 | Demostración | Sacar el sensor del sustrato (o sustrato seco) → riega en pulsos cortos; mojarlo → para. Desconectar un sensor → alarma. Botones cambian de modo. Analizador lógico/UART muestra la preempción. 5+ min continuos. |
+| 8 | Demostración | Sacar el sensor del sustrato (o sustrato seco) → el LED de riego da pulsos cortos; mojarlo → para. Desconectar un sensor → alarma. Botones cambian de modo. Analizador lógico/UART muestra la preempción. 5+ min continuos. |
 
-**Cumplimiento de mínimos:** entradas de 3 tipos distintos (analógica ADC, digital I²C, botones GPIO) y salidas de 4 tipos (actuador, pantalla, luz PWM, sonido).
+**Cumplimiento de mínimos:** entradas de 3 tipos distintos (analógica ADC, digital I²C, botones GPIO) y salidas de 3 tipos (pantalla, luz —LED RGB por PWM y LED de riego, que cuentan como un solo tipo— y sonido); el mínimo exigido es 2.
 
 ---
 
@@ -33,22 +33,23 @@ estado: borrador para revisar con Marco
 Precios **aproximados** en COP, verificar en tienda. Marquen lo que ya tienen.
 
 ### Imprescindible
+Lista reducida del 2026-11-10 (presupuesto ajustado). Links y precios exactos en [[bom]].
+
 | Componente | Ref. sugerida | Uso | ≈ COP |
 |---|---|---|---|
-| Sensor humedad de suelo **capacitivo** | "Capacitive Soil Moisture Sensor v1.2" | Humedad del suelo (ADC). **No** el resistivo de horquilla: se corroe en días. | 10.000 |
+| Sensor humedad de suelo **resistivo** | Sonda YL-69 + módulo YL-38 (salida AO) | Humedad del suelo (ADC). Más barato que el capacitivo; la sonda se corroe con el tiempo, suficiente para la demo. | 3.200 |
 | Sensor temp/humedad aire I²C | **SHT30** en módulo con pull-ups (ideal versión con carcasa de malla) | Microclima (I²C, CRC por medida) | 20.000 |
-| Pantalla OLED 0.96" I²C | SSD1306 128×64, **4 pines** (VCC GND SCL SDA) | Interfaz | 18.000 |
-| Fotorresistencia + R 10 kΩ | LDR 5 mm | Luz (ADC) | 1.500 |
-| Mini bomba sumergible brushless 2.5–6 V | 80–120 L/h, salida 7,5 mm ext. + 1 m manguera de silicona **6 mm int.** | Riego | 7.500 |
-| Transistor de potencia para la bomba | **TIP122** (TIP120 agotado; mismo circuito y patas). Alternativa: MOSFET **IRLZ44N**, *no* IRF520/IRFZ44N que no conducen con 3.3 V | Etapa de manejo | 1.300 |
-| Diodo 1N4007 + R 1 kΩ + cap. 100 µF/16 V | — | Flyback + base + desacople bomba | 1.500 |
+| Pantalla OLED 0.96" I²C | SSD1306 128×64, **4 pines** (VCC GND SCL SDA) | Interfaz | 12.500 |
+| Fotorresistencia + R 10 kΩ | LDR 5 mm | Luz (ADC) | 400 |
+| LED rojo 5 mm + R 220 Ω | pack ×10 | **Indicador de riego**: representa la bomba en PC6 | 2.000 |
 | Módulo buzzer activo 3 pines (trae transistor PNP 9012) | — | Alarma sonora | 3.000 |
-| LED RGB cátodo común 5 mm + 3× R 220 Ω | — | Estado (PWM) | 1.500 |
-| R 100 kΩ ×2 | — | Pull-down en entradas ADC (detectar sensor desconectado) | 200 |
-| Fuente 5 V ≥1 A para la bomba | cargador de celular + cable USB cortado, o portapilas 4×AA | Alimentación de potencia | 10.000 |
-| Protoboard + jumpers M-H y M-M | — | Montaje | 15.000 |
-| Caja plástica transparente con tapa, matera pequeña, frasco (tanque) | — | Invernadero | 20.000 |
-| Planta | **Árbol de jade pequeño** (*Crassula ovata*) en matera **con drenaje** y sustrato para cactus/suculentas | — | 15.000 |
+| LED RGB cátodo común 5 mm + 3× R 220 Ω | — | Estado (PWM) | 250 |
+| R 100 kΩ ×2 | — | Pull-down en entradas ADC (detectar cable de sensor suelto) | (con las demás resistencias, ≈ 1.000) |
+| Jumpers M-H y M-M | packs ×10 | Montaje | ≈ 4.800 |
+| Protoboard, caja transparente con tapa, matera pequeña, frasco | — | Invernadero | ya los tenemos |
+| Planta | **Árbol de jade pequeño** (*Crassula ovata*) en matera **con drenaje** y tierra | — | ya la tenemos |
+
+**Fuera de la lista (solo con bomba real):** mini bomba sumergible, manguera, TIP122, 1N4007, condensador de 100 µF y fuente de 5 V.
 
 ### Si no lo tienen ya
 | Componente | Uso | ≈ COP |
@@ -60,9 +61,8 @@ Precios **aproximados** en COP, verificar en tienda. Marquen lo que ya tienen.
 | Componente | Uso | ≈ COP |
 |---|---|---|
 | Analizador lógico 8 canales 24 MHz (clon Saleae, usa PulseView) | Evidencia visual de preempción con pines de traza por tarea | 35.000 |
-| Sensor de nivel tipo flotador | Detectar tanque vacío directamente | 8.000 |
 
-**Total aproximado:** 115.000–190.000 COP según lo que ya tengan.
+**Total aproximado:** ≈ 47.000 COP (detalle en [[bom]]), más ST-Link, USB-TTL o analizador si no los tienen.
 
 ---
 
@@ -72,11 +72,11 @@ Pines elegidos para **no chocar** con lo que la placa ya usa (flash SPI1 en PB0/
 
 | Periférico | Señal | Pin STM32 | Recurso | Alimentación / nivel |
 |---|---|---|---|---|
-| Sensor suelo capacitivo | AOUT | **PC0** | ADC1_IN10 | **3.3 V** (alimentarlo a 5 V puede pasar de 3.3 V en el pin) |
+| Sensor suelo YL-69 + módulo YL-38 | AO (la salida DO no se usa) | **PC0** | ADC1_IN10 | **3.3 V** (alimentado a 5 V, AO puede pasar de 3.3 V en el pin). Pull-down de 100 kΩ en PC0 |
 | LDR (divisor con 10 kΩ a GND) | punto medio | **PC1** | ADC1_IN11 | 3.3 V |
 | SHT30 | SCL / SDA | **PB6 / PB7** | I2C1 400 kHz, dir. 0x44 | 3.3 V (el módulo trae pull-ups; ADDR a GND) |
 | OLED SSD1306 | SCL / SDA | **PB6 / PB7** (mismo bus) | I2C1, dir. 0x3C | 3.3 V |
-| Bomba (vía TIP122) | base (R 1 kΩ) | **PC6** | GPIO salida | Bomba a 5 V externa, **GND común** |
+| LED de riego (representa la bomba) | ánodo; cátodo a GND con R 220 Ω | **PC6** | GPIO salida, activo en alto | 3.3 V, ≈ 5 mA |
 | Módulo buzzer (I/O) | señal | **PC7** | GPIO salida push-pull, **activo en bajo** (inicia en alto) | **VCC del módulo a 3V3**, no a 5 V |
 | LED RGB | R / G / B (R 220 Ω c/u) | **PD12 / PD13 / PD14** | TIM4_CH1/2/3 PWM | 3.3 V, ~6 mA por canal |
 | Botón K0 (placa) | — | PE4 | GPIO EXTI, pull-up, flanco bajada | activo en bajo |
@@ -85,24 +85,16 @@ Pines elegidos para **no chocar** con lo que la placa ya usa (flash SPI1 en PB0/
 | LEDs D2 / D3 (placa) | — | PA6 / PA7 | GPIO salida | activos en bajo |
 | USB-TTL | RX / TX | **PA9 (TX) / PA10 (RX)** | USART1 115200 8N1 + DMA TX | 3.3 V, conector J6 |
 | Pines de traza (analizador) | 1 por tarea | **PE7–PE11** | GPIO salida | — |
-| *Opcional* flotador | — | PE5 | GPIO entrada pull-up | — |
 | ST-Link | SWDIO / SWCLK | PA13 / PA14 | SWD | conector JTAG 20p |
 
-### Etapa de la bomba (no conectarla nunca directo al pin)
+### LED de riego (ocupa el lugar de la bomba)
 ```
- +5V ext ──┬──────────────┐
-           │              │
-        1N4007 (cátodo   (+) BOMBA
-         hacia +5V)      (−)
-           │              │
-           └──────┬───────┘
-                  C  TIP122
- PC6 ──[1 kΩ]──── B
-                  E
-                  │
- GND ext ─────────┴──── GND placa   (GND COMÚN obligatorio)
- 100 µF entre +5V ext y GND ext, cerca de la bomba.
+ PC6 ──[220 Ω]──▶|── GND      (LED rojo: ánodo hacia la resistencia, cátodo a GND)
 ```
+Encendido = "bomba regando". El firmware es el mismo que con la bomba: mismo pin y mismo pulso con tiempo máximo (`PUMP_PULSE_MS`). Un LED con su resistencia (≈ 5 mA) sí puede ir directo al pin.
+
+Si más adelante se monta una **bomba real, nunca directo al pin**: TIP122 con R 1 kΩ en la base, diodo 1N4007 en antiparalelo con la bomba, 100 µF cerca de ella y fuente de 5 V aparte con **GND común**.
+
 **Buzzer:** el módulo ya trae su propio transistor PNP (9012), así que se conecta directo: VCC→3V3, GND→GND, I/O→PC7. Va a **3V3 y no a 5 V** porque con el emisor del PNP a 5 V, un "alto" de 3,3 V en el pin no lo apaga y el buzzer sonaría siempre. Lógica invertida: PC7 en bajo = suena.
 
 ---
@@ -112,17 +104,17 @@ Pines elegidos para **no chocar** con lo que la placa ya usa (flash SPI1 en PB0/
 1. **Placa sola:** CubeMX + blink de PA6 + "hola" por USART1 con el USB-TTL. Confirmar que el ST-Link programa (BOOT0 en 0).
 2. **Bus I²C:** escaneo de direcciones por UART (esperado 0x44 SHT30, 0x3C OLED). Luego texto en la OLED y lectura del SHT30 con verificación de CRC.
 3. **Analógicos:** leer PC0/PC1 crudos por UART. **Calibrar** el sensor de suelo: valor en aire (seco = 0 %) y en vaso de agua (100 %); anotar en `app_config.h`. Probar desconexión (con el pull-down de 100 kΩ debe leer ≈0 → error).
-4. **Potencia:** bomba con fuente externa y TIP122, comandada con un botón. Verificar que la placa no se reinicia al arrancar la bomba.
+4. **LED de riego:** LED rojo + 220 Ω en PC6, comandado con un botón. Verificar la polaridad (pata larga = ánodo, hacia la resistencia).
 5. **Salidas de estado:** LED RGB por PWM, buzzer. Verificar que el buzzer es **activo**: con VCC a 3V3, poner I/O a GND con un cable → debe sonar un tono continuo. Si solo hace un clic, es pasivo y habría que generar el tono con PWM.
-6. **Integración física:** matera dentro de la caja; tanque (frasco) afuera o en una esquina; manguera de la bomba a la matera sujeta con un clip; sensor de suelo enterrado hasta la línea; LDR y SHT30 dentro de la caja a la altura de la planta; OLED y LED RGB en la tapa o frente. Cables por un orificio lateral.
+6. **Integración física:** matera dentro de la caja; sonda YL-69 enterrada en la tierra y su módulo YL-38 afuera, en seco; frasco con agua a mano para mojar la sonda en la demo; LED de riego visible junto a la matera; LDR y SHT30 dentro de la caja a la altura de la planta; OLED y LED RGB en la tapa o frente. Cables por un orificio lateral.
 7. **Pruebas:** ciclo completo de riego, alarmas, 5 min continuos, evidencia de preempción.
 
 > [!warning] Cuidados
-> - Probar el riego con poca agua y la caja sobre una bandeja: una bomba de 120 L/h mueve **~30 ml/s**, por eso los pulsos son de 1 s.
-> - El jade es suculenta: el exceso de agua lo pudre. La lógica riega poco y solo con el sustrato casi seco; en la demo el ciclo se acelera sacando el sensor de la tierra, sin encharcar la planta de verdad (se puede apuntar la manguera a un vaso durante los ensayos).
-> - Calibrar el sensor de suelo **en el sustrato de cactus** (arenoso): lee distinto que tierra normal.
-> - Electrónica **fuera** de la zona húmeda; protoboard sobre la tapa o al lado.
-> - La bomba no debe funcionar en seco mucho tiempo (por eso hay un tiempo máximo por pulso).
+> - Como no hay bomba, el suelo **no se moja solo**: en la demo el ciclo se cierra mojando la sonda a mano (meterla en el frasco con agua). Si nadie la moja, tras `MAX_PULSES_NO_RISE` pulsos el sistema pasa a ALARMA "sin agua", que es justo el comportamiento esperado.
+> - El jade es suculenta: el exceso de agua lo pudre. Para la demo se saca la sonda de la tierra y se moja aparte, sin encharcar la planta.
+> - La sonda YL-69 es resistiva y se corroe si queda enterrada y energizada muchos días: montarla para las pruebas y la demo, no dejarla semanas.
+> - Calibrar el sensor de suelo **en la tierra real de la matera**: cada sustrato lee distinto.
+> - Electrónica **fuera** de la zona húmeda; protoboard sobre la tapa o al lado. Solo la sonda toca la tierra.
 
 ---
 
