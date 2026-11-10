@@ -124,7 +124,24 @@ typedef struct {
   uint32_t     tick;      /* osKernelGetTickCount() al crear el evento */
   union { readings_t r; uint8_t fault_code; } data;
 } app_event_t;
+
+/* Causa de un fallo: en EV_SENSOR_FAULT y en el snapshot (la OLED la muestra). */
+typedef enum {
+  FAULT_NONE, FAULT_SOIL, FAULT_AIR, FAULT_ADC,       /* los genera tSensors */
+  FAULT_TIMEOUT, FAULT_NO_WATER, FAULT_OVERTEMP       /* los decide tControl */
+} fault_code_t;
+
+/* g_snapshot: lo escribe tControl (shared_set), lo leen tDisplay y tLogger (shared_get). */
+typedef struct {
+  sys_state_t state;
+  readings_t  r;
+  uint8_t     fault_code;  /* causa de la alarma */
+  uint8_t     screen;      /* tControl lo incrementa con K0; tDisplay usa screen % 3 */
+  uint32_t    tick;        /* última actualización */
+} snapshot_t;
 ```
+- `valid_mask`: `READ_VALID_SOIL` (bit0), `READ_VALID_LIGHT` (bit1), `READ_VALID_AIR` (bit2).
+- **Contrato de tSensors:** envía `EV_READING` en **cada** ciclo (500 ms) con las lecturas y su `valid_mask` (sirve de "sigo viva"); el aire se mide cada 2 s y entre medidas se repite el último valor bueno. `EV_SENSOR_FAULT` se envía **una sola vez** cuando el fallo se confirma (suelo: 1 ciclo; aire: 3 lecturas = 6 s; ADC: 3 ciclos). Para saber si la causa ya se resolvió, tControl mira el `valid_mask` de las lecturas siguientes.
 Cambiar estos tipos = avisar a la pareja (ver [[CLAUDE]]).
 
 ---
@@ -213,6 +230,7 @@ firmware/brote/                 ← proyecto STM32CubeIDE (nombre provisional)
 
 - Las tareas se declaran en CubeMX con **"Code Generation Option: As weak"**; CubeMX genera `__weak void StartSensorsTask(void *argument)` en `freertos.c` y nosotros damos la definición real en `App/Src/task_sensors.c`. Así el `.ioc` documenta prioridades/pilas y el código vive fuera de lo generado.
 - **Lectura del SHT30:** comando de medida única *sin clock stretching* `0x2400` → **soltar `mtxI2C`** → `osDelay(20)` → tomar mutex → leer 6 bytes (T, CRC, HR, CRC) → soltar. Así no se duerme con el mutex tomado y la OLED puede usar el bus durante la conversión. CRC-8 polinomio 0x31, init 0xFF. Conversión en punto fijo: `temp_cC = -4500 + 17500*raw_t/65535`, `hum_cPct = 10000*raw_h/65535` (usar aritmética de 32 bits).
+- **Refresco de la OLED:** el framebuffer (1 KB, `static`) se envía en 8 páginas de 128 bytes; `mtxI2C` se toma y se suelta en **cada página**, así tSensors espera el bus ≈ 3 ms como máximo en vez de los ≈ 24 ms del cuadro completo.
 - Capas: `task_*` (lógica RTOS) → `drv_*` (usa HAL) → HAL. Las tareas no llaman HAL directamente salvo casos triviales.
 
 ---
