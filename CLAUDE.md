@@ -36,7 +36,7 @@ assets/                   ← fotos, capturas del analizador lógico, video
 - **I2C1 se usa solo con `mtxI2C` tomado** (lo comparten SHT30 y OLED). Tomar → transacción → soltar; nunca dormir con el mutex tomado.
 - `g_snapshot` (estado + lecturas) solo se accede con `mtxData` o mediante `shared_get()/shared_set()` en `app_shared.c`.
 - **Solo `tControl` cambia el estado del sistema.** Las demás tareas informan con eventos en `qEvents`; no deciden.
-- **Solo `tActuators` toca bomba, buzzer y LED RGB.** La bomba siempre se enciende con tiempo máximo (`PUMP_PULSE_MS`); jamás un "ON" sin timeout.
+- **Solo `tActuators` toca bomba, buzzer y LED RGB.** (Desde el 2026-11-10 la "bomba" es un LED indicador en PC6; las reglas no cambian.) La bomba siempre se enciende con tiempo máximo (`PUMP_PULSE_MS`); jamás un "ON" sin timeout.
 - Sin buffers grandes en pila; usar `static`. Sin `malloc` después del arranque (los objetos RTOS se crean en el init).
 - Sin `printf` de float: magnitudes en enteros de punto fijo (`temp_cC` = centésimas de °C).
 - Prioridades, periodos y pilas están en `docs/arquitectura.md` §2. Cambiar uno = actualizar esa tabla en el mismo commit.
@@ -77,5 +77,5 @@ El dueño puede delegar. Si necesitas cambiar un archivo del otro, hazlo en tu r
 ## Lo que el agente NO debe hacer
 - Editar `Drivers/`, `Middlewares/` o código generado fuera de `USER CODE`.
 - Inventar pines: el mapa está en `docs/propuesta.md` §3; respeta lo que ya usa la placa (flash SPI1 PB0/PB3-5, SD PC8-12/PD2, LEDs PA6/PA7, botones PA0/PE3/PE4).
-- Conectar cargas directo a un pin en ningún diagrama o instrucción: la bomba siempre con TIP122 + diodo; el buzzer solo a través de su módulo (que trae transistor), alimentado a 3V3.
+- Conectar cargas directo a un pin en ningún diagrama o instrucción: el LED de riego de PC6 va con su resistencia de 220 Ω; si vuelve una bomba real, siempre con TIP122 + diodo y fuente aparte; el buzzer solo a través de su módulo (que trae transistor), alimentado a 3V3.
 - Hacer push a `main` o forzar push sin que el humano lo pida.
