@@ -144,7 +144,7 @@ typedef struct {
 } snapshot_t;
 ```
 - `valid_mask`: `READ_VALID_SOIL` (bit0), `READ_VALID_LIGHT` (bit1), `READ_VALID_AIR` (bit2).
-- **Contrato de tSensors:** envía `EV_READING` en **cada** ciclo (500 ms) con las lecturas y su `valid_mask` (sirve de "sigo viva"); el aire se mide cada 2 s y entre medidas se repite el último valor bueno. `EV_SENSOR_FAULT` se envía **una sola vez** cuando el fallo se confirma (suelo: 1 ciclo; aire: 3 lecturas = 6 s; ADC: 3 ciclos). Para saber si la causa ya se resolvió, tControl mira el `valid_mask` de las lecturas siguientes.
+- **Contrato de tSensors:** envía `EV_READING` en **cada** ciclo (500 ms) con las lecturas y su `valid_mask` (sirve de "sigo viva"); el aire se mide cada 2 s, **después de enviar el evento** (la medida del HTU21 tarda ≈ 75 ms y no debe retrasarlo), así que el dato nuevo viaja en el evento del ciclo siguiente; entre medidas se repite el último valor bueno. `EV_SENSOR_FAULT` se envía **una sola vez** cuando el fallo se confirma (suelo: 1 ciclo; aire: 3 lecturas = 6 s; ADC: 3 ciclos). Para saber si la causa ya se resolvió, tControl mira el `valid_mask` de las lecturas siguientes.
 Cambiar estos tipos = avisar a la pareja (ver [[CLAUDE]]).
 
 ---
