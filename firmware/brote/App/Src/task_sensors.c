@@ -4,11 +4,16 @@
  *
  * Cada SENSORS_PERIOD_MS (osDelayUntil, tick absoluto → periodo sin deriva):
  *   1. lee suelo y luz por ADC (promediados);
- *   2. cada HTU21_EVERY_N_CYCLES ciclos lee el HTU21 (temperatura y humedad, dos
- *      medidas separadas) y valida CRC y rango físico;
- *   3. envía EV_READING a qEvents con las lecturas y su valid_mask;
- *   4. si un fallo se confirma, envía además EV_SENSOR_FAULT con su causa
- *      (una vez por fallo, no en cada ciclo).
+ *   2. envía EV_READING a qEvents con esas lecturas, el último dato bueno del
+ *      aire y su valid_mask;
+ *   3. si un fallo se confirma, envía además EV_SENSOR_FAULT con su causa
+ *      (una vez por fallo, no en cada ciclo);
+ *   4. cada HTU21_EVERY_N_CYCLES ciclos lee el HTU21 (temperatura y humedad, dos
+ *      medidas separadas, ≈ 75 ms) y valida CRC y rango físico.
+ *
+ * El aire se mide DESPUÉS de enviar EV_READING: así el evento sale siempre
+ * justo al despertar (periodo exacto de 500 ms) y la medida lenta del HTU21 no
+ * lo retrasa. El dato nuevo del aire viaja en el evento del ciclo siguiente.
  *
  * La tarea solo se bloquea en osDelayUntil, en mtxI2C y en el osDelay de la
  * conversión del HTU21 (dentro del driver, con el mutex suelto).
@@ -147,18 +152,7 @@ void StartSensorsTask(void *argument)
             r->valid_mask |= READ_VALID_LIGHT;
         }
 
-        /* 2) Aire: cada HTU21_EVERY_N_CYCLES ciclos; el resto usa la última lectura buena. */
-        bool air_cycle = ((cycle % HTU21_EVERY_N_CYCLES) == 0U);
-        bool air_fault_new = false;
-
-        if (air_cycle) {
-            bool air_ok = sensors_read_air(&air);
-
-            air_fault_new = sensors_track(&air_fault, !air_ok, AIR_FAULT_COUNT);
-            if (air_fault.active) {
-                air.valid = false;      /* fallo confirmado: el dato viejo ya no sirve */
-            }
-        }
+        /* 2) Aire: última lectura buena (se midió al final de un ciclo anterior). */
         if (air.valid) {
             r->temp_cC = air.temp_cC;
             r->hum_cPct = air.hum_cPct;
@@ -170,7 +164,7 @@ void StartSensorsTask(void *argument)
         ev.tick = osKernelGetTickCount();
         (void)sensors_send(&ev);
 
-        /* 4) Fallos recién confirmados. */
+        /* 4) Fallos de los analógicos recién confirmados. */
         if (sensors_track(&soil_fault, soil_st == ANALOG_ERR_DISCONNECTED, SOIL_FAULT_COUNT)) {
             sensors_send_fault(&soil_fault, FAULT_SOIL);
         }
@@ -179,18 +173,33 @@ void StartSensorsTask(void *argument)
                           ADC_FAULT_COUNT)) {
             sensors_send_fault(&adc_fault, FAULT_ADC);
         }
-        if (air_fault_new) {
-            sensors_send_fault(&air_fault, FAULT_AIR);
-        }
+
+        /* 5) Aire: cada HTU21_EVERY_N_CYCLES ciclos, ya con el evento enviado. */
+        if ((cycle % HTU21_EVERY_N_CYCLES) == 0U) {
+            bool air_ok = sensors_read_air(&air);
+            bool air_fault_new = sensors_track(&air_fault, !air_ok, AIR_FAULT_COUNT);
+
+            if (air_fault.active) {
+                air.valid = false;      /* fallo confirmado: el dato viejo ya no sirve */
+            }
+            if (air_fault_new) {
+                sensors_send_fault(&air_fault, FAULT_AIR);
+            }
 
 #if SENSORS_LOG_READINGS
-        if (air_cycle) {
+            /* Analógicos de este ciclo y aire recién medido (irá en el próximo evento). */
+            uint8_t mask = (uint8_t)(r->valid_mask & (READ_VALID_SOIL | READ_VALID_LIGHT));
+
+            if (air.valid) {
+                mask |= READ_VALID_AIR;
+            }
             log_printf("SEN s=%u/%d l=%u/%d T=%d H=%d m=%u",
                        (unsigned)soil_raw, (int)r->soil_pct,
                        (unsigned)light_raw, (int)r->light_pct,
-                       (int)r->temp_cC, (int)r->hum_cPct, (unsigned)r->valid_mask);
-        }
+                       air.valid ? (int)air.temp_cC : 0, air.valid ? (int)air.hum_cPct : 0,
+                       (unsigned)mask);
 #endif
+        }
 
         cycle++;
         if ((cycle % SENSORS_STACK_REPORT_CYCLES) == 0U) {
