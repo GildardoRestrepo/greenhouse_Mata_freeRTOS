@@ -21,7 +21,7 @@ bool out_init(void);
 /** @brief LED de riego (ocupa el lugar de la bomba): true = "regando". */
 void out_pump(bool on);
 
-/** @brief Buzzer del módulo (activo en bajo): true = suena. */
+/** @brief Buzzer del módulo (activo en alto): true = suena. */
 void out_buzzer(bool on);
 
 /** @brief LED RGB, cada canal en milésimas de brillo (0..1000). */

@@ -48,7 +48,7 @@ Detalle en [[CLAUDE]] y [[propuesta]].
 
 ## Hardware y conexiones
 
-Suelo → PC0 (ADC) · LDR → PC1 (ADC) · HTU21 + OLED → I2C1 PB6/PB7 · LED de riego (bomba simulada) → PC6 · Buzzer → PC7 (módulo, activo en bajo) · LED RGB → PD12–14 (TIM4 PWM) · UART → PA9/PA10. Tabla completa en [[propuesta]].
+Suelo → PC0 (ADC) · LDR → PC1 (ADC) · HTU21 + OLED → I2C1 PB6/PB7 · LED de riego (bomba simulada) → PC6 · Buzzer → PC7 (módulo, activo en alto) · LED RGB → PD12–14 (TIM4 PWM) · UART → PA9/PA10. Tabla completa en [[propuesta]].
 
 ---
 

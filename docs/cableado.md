@@ -50,7 +50,7 @@ flowchart LR
   subgraph RIEGO["LED de riego (bomba simulada)"]
     LEDR["220 Ω + LED rojo"]
   end
-  subgraph BUZ["Módulo buzzer (activo en bajo)"]
+  subgraph BUZ["Módulo buzzer (activo en alto)"]
     BUZ_IO["I/O"]
   end
   subgraph RGB["LED RGB cátodo común"]

@@ -18,7 +18,7 @@ estado: borrador para revisar con Marco
 | 1 | Nombre y objetivo | **Brote**: mantener la humedad del suelo de una planta en un rango objetivo sin intervención humana, y mostrar el microclima del invernadero. |
 | 2 | Usuario y escenario | Persona que cultiva una planta pequeña en interior (escritorio, apartamento) y se ausenta días; o un laboratorio escolar que quiere observar variables de crecimiento. |
 | 3 | Entradas | Humedad de suelo (sonda resistiva YL-69 + módulo YL-38, ADC), luz con LDR (ADC), temperatura y humedad del aire (I²C), 3 botones de la placa (GPIO/EXTI). |
-| 4 | Salidas | LED indicador de riego en PC6 (GPIO; ocupa el lugar de la bomba), pantalla OLED (I²C), LED RGB de estado (PWM TIM4), módulo buzzer activo (GPIO, activo en bajo), telemetría por UART al PC. |
+| 4 | Salidas | LED indicador de riego en PC6 (GPIO; ocupa el lugar de la bomba), pantalla OLED (I²C), LED RGB de estado (PWM TIM4), módulo buzzer activo (GPIO, activo en alto), telemetría por UART al PC. |
 | 5 | Estados | `INIT` → `MONITOREO` ⇄ `RIEGO`, `MANUAL`, `ALARMA` (ver [[arquitectura]]). |
 | 6 | Periféricos | ADC1, I2C1, TIM4 PWM, USART1 (+DMA), GPIO/EXTI, TIM6 como timebase HAL. |
 | 7 | Tareas FreeRTOS | 5 tareas, 5 niveles de prioridad, colas + notificaciones + mutex (ver [[arquitectura]]). |
@@ -42,7 +42,7 @@ Lista reducida del 2026-11-10 (presupuesto ajustado). Links y precios exactos en
 | Pantalla OLED 0.96" I²C | SSD1306 128×64, **4 pines** (VCC GND SCL SDA) | Interfaz | 12.500 |
 | Fotorresistencia + R 10 kΩ | LDR 5 mm | Luz (ADC) | 400 |
 | LED rojo 5 mm + R 220 Ω | pack ×10 | **Indicador de riego**: representa la bomba en PC6 | 2.000 |
-| Módulo buzzer activo 3 pines (trae transistor PNP 9012) | — | Alarma sonora | 3.000 |
+| Módulo buzzer activo 3 pines (con transistor integrado, disparo en alto) | — | Alarma sonora | 3.000 |
 | LED RGB cátodo común 5 mm + 3× R 220 Ω | — | Estado (PWM) | 250 |
 | R 100 kΩ ×2 | — | Pull-down en entradas ADC (detectar cable de sensor suelto) | (con las demás resistencias, ≈ 1.000) |
 | Jumpers M-H y M-M | packs ×10 | Montaje | ≈ 4.800 |
@@ -79,7 +79,7 @@ Pines elegidos para **no chocar** con lo que la placa ya usa (flash SPI1 en PB0/
 | HTU21 (GY-21) | SCL / SDA | **PB6 / PB7** | I2C1 400 kHz, dir. 0x40 (fija) | 3.3 V (el módulo trae pull-ups) |
 | OLED SSD1306 | SCL / SDA | **PB6 / PB7** (mismo bus) | I2C1, dir. 0x3C | 3.3 V |
 | LED de riego (representa la bomba) | ánodo; cátodo a GND con R 220 Ω | **PC6** | GPIO salida, activo en alto | 3.3 V, ≈ 5 mA |
-| Módulo buzzer (I/O) | señal | **PC7** | GPIO salida push-pull, **activo en bajo** (inicia en alto) | **VCC del módulo a 3V3**, no a 5 V |
+| Módulo buzzer (I/O) | señal | **PC7** | GPIO salida push-pull, **activo en alto** (medido el 2026-11-11) | **VCC del módulo a 3V3**, no a 5 V |
 | LED RGB | R / G / B (R 220 Ω c/u) | **PD12 / PD13 / PD14** | TIM4_CH1/2/3 PWM | 3.3 V, ~6 mA por canal |
 | Botón K0 (placa) | — | PE4 | GPIO EXTI, pull-up, flanco bajada | activo en bajo |
 | Botón K1 (placa) | — | PE3 | GPIO EXTI, pull-up, flanco bajada | activo en bajo |
@@ -97,7 +97,7 @@ Encendido = "bomba regando". El firmware es el mismo que con la bomba: mismo pin
 
 Si más adelante se monta una **bomba real, nunca directo al pin**: TIP122 con R 1 kΩ en la base, diodo 1N4007 en antiparalelo con la bomba, 100 µF cerca de ella y fuente de 5 V aparte con **GND común**.
 
-**Buzzer:** el módulo ya trae su propio transistor PNP (9012), así que se conecta directo: VCC→3V3, GND→GND, I/O→PC7. Va a **3V3 y no a 5 V** porque con el emisor del PNP a 5 V, un "alto" de 3,3 V en el pin no lo apaga y el buzzer sonaría siempre. Lógica invertida: PC7 en bajo = suena.
+**Buzzer:** el módulo trae su propio transistor, así que se conecta directo: VCC→3V3, GND→GND, I/O→PC7. Se alimenta a **3V3**. El módulo comprado resultó ser de **disparo en alto** (se comprobó el 2026-11-11 llevando la señal a 3V3 y a GND): PC7 en alto = suena, PC7 en bajo = silencio. El `.ioc` todavía inicia PC7 en alto, así que suena un instante en el arranque hasta que `out_init()` lo apaga; pendiente poner *GPIO output level = Low* en CubeMX.
 
 ---
 

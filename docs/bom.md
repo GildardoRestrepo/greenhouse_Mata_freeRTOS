@@ -42,7 +42,7 @@ Detalle técnico de cada componente en [[propuesta]] §2 y §3.
 | LED indicador "bomba" | ✅ | Un LED rojo del pack con **220 Ω en serie** entre PC6 y GND (≈ 5 mA: sí puede ir directo al pin). Reemplaza a la bomba; el firmware no cambia (mismo pin, mismo pulso con tiempo máximo). |
 | Bomba, manguera, TIP122, 1N4007, condensador 100 µF, fuente 5 V, R 1 kΩ | 🗑️ eliminados | Solo hacían falta para la bomba real. Si algún día vuelve, **nunca directo al pin**: TIP122 + diodo + fuente aparte con GND común. |
 | Protoboard | 🗑️ eliminada | Ya la tenemos. |
-| Módulo buzzer | ⚠️ **cambia la conexión** | Trae un transistor **PNP 9012** y se activa **en bajo**. Hay que alimentarlo a **3V3, no a 5 V**: con 5 V, el pin a 3,3 V no lo apaga y sonaría siempre. La página es ambigua sobre si es activo o pasivo; probarlo como dice [[propuesta]] §4 paso 5. |
+| Módulo buzzer | ⚠️ **cambia la conexión** | El módulo recibido es de **disparo en alto** (comprobado el 2026-11-11): suena con la señal en alto. Se alimenta a 3V3 y va directo a PC7; `out_buzzer()` ya usa esa lógica. |
 | LED RGB | ✅ | Aunque el link dice "anodo-comun", el producto es **cátodo común**, que es el que necesitamos. |
 | Resistencias | ❓ **contar las de 220 Ω** | Hacen falta **cuatro** de 220 Ω (tres del LED RGB y una del LED de riego) y la lista compra dos: confirmar que las otras dos ya están. La de 10 kΩ es el divisor de la LDR; las de 100 kΩ, los pull-down de PC0 y PC1. |
 | Jumpers | ✅ comprados | Sin precio unitario anotado; están incluidos en el total pagado de $59.160. |

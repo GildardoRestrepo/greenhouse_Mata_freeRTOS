@@ -52,8 +52,8 @@ void out_pump(bool on)
 
 void out_buzzer(bool on)
 {
-    /* Módulo con PNP: PC7 en bajo = suena. */
-    HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, on ? GPIO_PIN_RESET : GPIO_PIN_SET);
+    /* Módulo de disparo en alto (medido el 2026-11-11): PC7 en alto = suena. */
+    HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, on ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
 void out_rgb(uint16_t r, uint16_t g, uint16_t b)
