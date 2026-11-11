@@ -9,13 +9,13 @@ created: 2026-11-08
 | P01 | Arranque y UART | Reset, abrir monitor serie 115200 | Banner + `INIT→MONITOREO` | | |
 | P02 | Bus I²C | Escaneo al arranque | 0x40 (HTU21) y 0x3C (OLED) | | |
 | P03 | Calibración suelo | Sensor en aire / en agua | crudo seco ≈ ?, mojado ≈ ? | 2026-11-11: aire = 3604, agua = 1187 (leídos en el depurador, `soil_raw`) | |
-| P04 | Riego automático | Sacar la sonda de la tierra | RIEGO, el LED de riego (PC6) da pulsos de 1 s cada 15 s | 2026-11-11: conforme, visto en la placa (LED PC6, RGB y OLED); sin log UART (no hay adaptador USB-TTL) | |
+| P04 | Riego automático | Sacar la sonda de la tierra | RIEGO, el LED de riego (PC6) da pulsos de 1 s cada ≈ 16 s (`PUMP_PULSE_MS` + `SOAK_MS`) | 2026-11-11: conforme, visto en la placa (LED PC6, RGB y OLED); sin log UART (no hay adaptador USB-TTL) | |
 | P05 | Fin de riego | Meter sensor en agua | vuelve a MONITOREO | | |
 | P06 | Riego sin efecto | Dejar la sonda seca durante RIEGO (no hay bomba real: nadie la moja) | 3 pulsos del LED → ALARMA "sin agua" | 2026-11-11: conforme, alarma al tercer pulso, vista en la placa; sin log UART | |
 | P07 | Sensor desconectado | Desconectar AOUT del sensor de suelo | ALARMA, bomba bloqueada | | |
 | P08 | HTU21 desconectado / CRC inválido | Quitar el módulo | ALARMA "aire" tras 3 fallos | | |
 | P09 | Botones / modos | K_UP, K1, K0 | MANUAL ⇄ MONITOREO, riego manual, cambio de pantalla | | |
-| P10 | Preempción | K1 durante refresco de OLED, analizador en PE7–PE11 | Control y Actuators cortan a Display | | |
+| P10 | Preempción | K1 durante refresco de OLED, con `DISPLAY_TRACE_FRAMES = 1` (log por UART; ver también P30) | Control y Actuators cortan a Display: sus líneas caen entre `DSP frame start` y `DSP frame end` | | |
 | P11 | Pilas | High-water mark tras 5 min | ≥ 25 % libre en cada tarea | | |
 | P12 | Estabilidad | 5+ min continuos con ciclos de riego | sin reinicios ni bloqueos | | |
 

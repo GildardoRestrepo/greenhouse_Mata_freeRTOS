@@ -6,7 +6,7 @@ created: 2026-10-21
 # Reto 4 — Programación en alto nivel
 
 > [!resumen] Resumen
-> **Brote**: mini-invernadero con un pequeño árbol de jade (*Crassula ovata*). Mide humedad del suelo, luz y temperatura/humedad del aire; riega sola con una mini-bomba, muestra todo en una OLED, indica el estado con un LED RGB y avisa fallos con un buzzer. STM32F407VET6 + HAL + FreeRTOS (CMSIS-RTOS v2).
+> **Brote**: mini-invernadero con un pequeño árbol de jade (*Crassula ovata*). Mide humedad del suelo, luz y temperatura/humedad del aire; "riega" sola (por presupuesto la bomba es un LED indicador en PC6), muestra todo en una OLED, indica el estado con un LED RGB y avisa fallos con un buzzer. STM32F407VET6 + HAL + FreeRTOS (CMSIS-RTOS v2).
 
 **Curso:** Microprocesadores — Universidad Pontificia Bolivariana
 **Integrantes:** Gildardo Estevan Restrepo · Marco Aurelio Guardia
@@ -21,10 +21,12 @@ docs/
   enunciado.md       reto y rúbrica
   propuesta.md       idea, compras, pines, plan de montaje, cronograma
   arquitectura.md    tareas, prioridades, sincronización, estados, CubeMX
+  bom.md             lista de materiales y compra real
+  cableado.md        diagrama y lista de conexiones para armar
   pruebas.md         plan y resultados de pruebas
   bitacora.md        historial de trabajo y decisiones
   datasheets/        esquemático de la placa y RM0090
-firmware/brote/      proyecto STM32CubeIDE (.ioc, Core/, App/)
+firmware/brote/      proyecto STM32CubeIDE (brote.ioc, Core/, App/)
 assets/              fotos, capturas, video
 ```
 
@@ -52,9 +54,9 @@ Suelo → PC0 (ADC) · LDR → PC1 (ADC) · HTU21 + OLED → I2C1 PB6/PB7 · LED
 
 ---
 
-```
+## Estado (2026-11-11)
 
-```
+Firmware corriendo en la placa con todo conectado. Calibración de suelo y luz medida; riego automático y alarma "sin agua" probados (ver [[pruebas]]). Pendiente: adaptador USB-TTL para la telemetría por UART, nivel inicial bajo de PC7 en el `.ioc` y las pruebas de desconexión, preempción, pilas y estabilidad.
 
 ---
 

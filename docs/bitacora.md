@@ -8,6 +8,10 @@ Entradas nuevas **arriba**. Formato: fecha · quién · hecho · pendiente · de
 
 ---
 
+## 2026-11-11 · ESTEVAN (+ Claude) — repaso de consistencia de la documentación
+- **Hecho:** docs alineados con el código y la placa. Buzzer **activo en alto** también en el diagrama de [[arquitectura]]; hook de desborde de pila descrito como está (LED rojo fijo, sin mensaje); fallo del aire bloquea el riego (decisión del 2026-11-10); pulsación larga de K_UP sin uso; evidencia de preempción por UART o depurador (los pines de traza PE7–PE11 quedan reservados, sin hooks ni analizador); bases de tiempo (SysTick, TIM6, TIM4) en §6; checklist de CubeMX al día (`TIM6_DAC_IRQHandler` escrito a mano, prioridades NVIC reales, `brote.ioc` junto a `App/`). P04 corregida a pulsos cada ≈ 16 s y P10 sin analizador. `bom.md`: USB-TTL aún no conseguido. `README`: BOM, cableado y estado actual.
+- **Pendiente:** sin cambios respecto a la entrada de abajo (PC7 en bajo en el `.ioc`, USB-TTL, P07, P10–P12).
+
 ## 2026-11-11 · MARCO y ESTEVAN (+ Claude) — primera prueba en la placa, calibración y buzzer
 - **Hecho:** proyecto corriendo en la placa con todo conectado. Calibración medida con el depurador (breakpoint en la línea `SEN` de `task_sensors.c`): suelo aire = 3604, agua = 1187; LDR tapada = 987, linterna = 3531. Valores en `app_config.h` (**archivo compartido**). Probados en la placa riego automático (P04) y alarma "sin agua" (P06).
 - **INTERFAZ:** el buzzer es **activo en alto**, no en bajo. `out_buzzer()` en `drv_outputs.c`: sonar = `GPIO_PIN_SET`. Corregidos `propuesta.md`, `cableado.md`, `bom.md` y el `README`.

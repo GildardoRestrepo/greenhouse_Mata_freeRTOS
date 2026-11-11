@@ -46,8 +46,8 @@ Detalle técnico de cada componente en [[propuesta]] §2 y §3.
 | LED RGB | ✅ | Aunque el link dice "anodo-comun", el producto es **cátodo común**, que es el que necesitamos. |
 | Resistencias | ❓ **contar las de 220 Ω** | Hacen falta **cuatro** de 220 Ω (tres del LED RGB y una del LED de riego) y la lista compra dos: confirmar que las otras dos ya están. La de 10 kΩ es el divisor de la LDR; las de 100 kΩ, los pull-down de PC0 y PC1. |
 | Jumpers | ✅ comprados | Sin precio unitario anotado; están incluidos en el total pagado de $59.160. |
-| ST-Link y USB-TTL | ❓ | No están en la lista. Confirmar que ya los tienen: la placa **no** trae USB-serial y sin el adaptador no hay telemetría. |
-| Analizador lógico | ❓ | No está en la lista. La evidencia de preempción se hará por UART con marcas de tiempo (y los LEDs PA6/PA7). Es suficiente para la rúbrica. |
+| ST-Link y USB-TTL | ⚠️ | El ST-Link está y programa. El USB-TTL **no se ha conseguido** (2026-11-11): sin él no hay telemetría por UART y las lecturas se toman con el depurador. |
+| Analizador lógico | 🗑️ no se usa | No está en la lista. La evidencia de preempción es por UART con marcas de tiempo (necesita el USB-TTL) o, sin él, con el depurador. |
 
 ## Enlaces
 - [[propuesta]] · [[arquitectura]] · [[bitacora]]

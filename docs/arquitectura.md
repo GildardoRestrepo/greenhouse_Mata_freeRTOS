@@ -33,7 +33,7 @@ flowchart LR
   subgraph Salidas
     PUMP[LED de riego<br/>PC6, bomba simulada]
     RGB[LED RGB<br/>TIM4 PWM]
-    BUZ[Buzzer<br/>PC7 activo bajo]
+    BUZ[Buzzer<br/>PC7 activo en alto]
     OLED[OLED<br/>I2C1]
     UART[USART1 → PC]
   end
@@ -73,7 +73,7 @@ flowchart LR
 - **tLogger — la más baja.** La telemetría puede salir tarde sin consecuencias; la cola absorbe ráfagas.
 
 ### Verificación de pila
-- `configCHECK_FOR_STACK_OVERFLOW = 2` + `vApplicationStackOverflowHook()` → LED rojo fijo + mensaje.
+- `configCHECK_FOR_STACK_OVERFLOW = 2` + `vApplicationStackOverflowHook()` → `act_fatal_stack_overflow()`: bomba y buzzer apagados, LED rojo fijo y el sistema se detiene (sin mensaje: en ese punto la UART ya no es confiable).
 - Cada tarea reporta `uxTaskGetStackHighWaterMark(NULL)` al logger cada 10 s (comando o modo debug). Criterio: **≥ 25 % libre** después de la prueba de 5 min. Documentar los valores medidos en la tabla final.
 - Regla: nada de buffers grandes en pila (framebuffer OLED de 1 KB es `static` global).
 
@@ -192,11 +192,11 @@ stateDiagram-v2
 |---|---|---|
 | Cable AO del sensor de suelo suelto | ADC < `SOIL_RAW_MIN` (pull-down 100 kΩ lleva el pin a 0) | ALARMA, bomba bloqueada |
 | Sonda YL-69 suelta del módulo YL-38 | No se distingue de "suelo seco": AO sube al máximo | entra a RIEGO y, tras N pulsos sin subir la humedad, ALARMA "sin agua" |
-| HTU21 no responde o CRC inválido | HAL_I2C ≠ HAL_OK o CRC-8 incorrecto, 3 veces seguidas | ALARMA "aire" (el riego puede seguir, decidir) |
+| HTU21 no responde o CRC inválido | HAL_I2C ≠ HAL_OK o CRC-8 incorrecto, 3 veces seguidas | ALARMA "aire" (decidido el 2026-11-10: también bloquea el riego, para que sea observable) |
 | tSensors deja de reportar | `qEvents` vacía > `SENSOR_TIMEOUT_MS` (timeout de la espera) | ALARMA "timeout" |
 | Riego sin efecto (con la bomba simulada: nadie mojó la sonda) | N pulsos sin subir la humedad | ALARMA "sin agua" |
 | Bomba encendida demasiado | timeout propio en tActuators | se apaga sí o sí |
-| Botón con rebote | antirrebote por tiempo en ISR (ignora < 50 ms) + pulsación larga ≥ 1 s | — |
+| Botón con rebote | antirrebote por tiempo en ISR (ignora < 50 ms); la pulsación larga (`EV_BTN_KUP_LONG`) quedó sin usar | — |
 | Lectura fuera de rango físico | temp < -10 / > 60 °C, HR > 100 % | se descarta, cuenta como fallo |
 
 ---
@@ -205,9 +205,9 @@ stateDiagram-v2
 
 **Escenario:** `tDisplay` (BelowNormal) está enviando un cuadro completo a la OLED (~25 ms de I²C, trabajo no instantáneo). Se presiona K1 → la ISR pone `EV_BTN_K1` en `qEvents` → `tControl` (AboveNormal) pasa de **bloqueada** a **lista**, y como tiene más prioridad que la que se ejecuta, el scheduler la pone a **ejecutar** inmediatamente (en la salida de la ISR, `portYIELD_FROM_ISR`). Control notifica a `tActuators` (High), que a su vez desaloja a Control, enciende la bomba y se bloquea. Luego Control termina y solo entonces Display continúa su cuadro.
 
-**Evidencia (dos vías):**
-1. **Analizador lógico:** cada tarea pone su pin de traza (PE7–PE11) en alto al entrar y bajo al salir, usando los hooks `traceTASK_SWITCHED_IN/OUT` en `FreeRTOSConfig.h` (sección USER CODE). En PulseView se ve el pulso de Display cortado por Control y Actuators.
-2. **UART:** cada evento lleva `tick` (y opcionalmente ciclos DWT). El log muestra `DSP frame start t=…`, `CTL EV_BTN_K1 t=…`, `ACT pump ON t=…`, `DSP frame end t=…` con los tiempos de Control/Actuators **dentro** del intervalo de Display.
+**Evidencia:**
+1. **UART (implementada):** cada evento lleva `tick`. Con `DISPLAY_TRACE_FRAMES = 1` el log muestra `DSP frame start t=…`, `CTL EV_BTN_K1 t_isr=… t=…`, `ACT bomba ON t=…`, `DSP frame end t=…`, con los tiempos de Control/Actuators **dentro** del intervalo de Display. Necesita el adaptador USB-TTL, que al 2026-11-11 no se ha conseguido; sin él, los mismos valores se leen en el depurador (`s_tx_buf` y `g_snapshot` en *Expressions*).
+2. **Analizador lógico (opcional, no implementado):** PE7–PE11 están configurados como salidas para trazas, pero no se escribieron los hooks `traceTASK_SWITCHED_IN/OUT` y no hay analizador.
 
 > **Estados de tarea:** *ejecutándose* = la que tiene la CPU; *lista* = podría correr pero hay otra de igual o mayor prioridad corriendo; *bloqueada* = esperando un retardo (`osDelayUntil`) o un evento (cola, notificación, mutex) → **no consume CPU**. Entre tareas listas de igual prioridad hay *round-robin* por tick (1 ms); con distinta prioridad siempre corre la de mayor.
 
@@ -216,7 +216,7 @@ stateDiagram-v2
 ## 6. Organización del código
 
 ```
-firmware/brote/                 ← proyecto STM32CubeIDE (nombre provisional)
+firmware/brote/                 ← proyecto STM32CubeIDE
 ├── brote.ioc                   ← CubeMX: reloj, pines, periféricos, tareas, colas, mutex
 ├── Core/                       ← generado por CubeMX; solo tocar dentro de USER CODE
 │   ├── Inc/ FreeRTOSConfig.h, main.h, ...
@@ -228,7 +228,7 @@ firmware/brote/                 ← proyecto STM32CubeIDE (nombre provisional)
 │       ├── state_machine.c       ← lógica pura de transiciones (sin HAL → fácil de probar)
 │       ├── drv_htu21.c  drv_ssd1306.c  font_6x8.c
 │       ├── drv_analog.c          ← ADC suelo + LDR, calibración
-│       └── drv_outputs.c         ← LED de riego (bomba), buzzer, RGB, pines de traza
+│       └── drv_outputs.c         ← LED de riego (bomba), buzzer, RGB
 ├── Drivers/  Middlewares/      ← HAL y FreeRTOS de ST, no se editan
 ```
 
@@ -236,21 +236,26 @@ firmware/brote/                 ← proyecto STM32CubeIDE (nombre provisional)
 - **Lectura del HTU21 (módulo GY-21, 0x40):** temperatura y humedad son **dos medidas separadas**, cada una con el mismo ciclo: comando *no-hold master* (`0xF3` temperatura, `0xF5` humedad) → **soltar `mtxI2C`** → `osDelay` (55 ms para temperatura, 20 ms para humedad; la conversión dura 50 y 16 ms como máximo) → tomar mutex → leer 3 bytes (MSB, LSB, CRC) → soltar. Así no se duerme con el mutex tomado y la OLED puede usar el bus durante la conversión. CRC-8 polinomio 0x31, **init 0x00**. Antes de convertir se enmascaran los 2 bits de estado (`raw & 0xFFFC`). Conversión en punto fijo: `temp_cC = -4685 + 17572*raw/65536`, `hum_cPct = -600 + 12500*raw/65536` (aritmética de 32 bits; la humedad se satura a 0..100 %).
 - **Refresco de la OLED:** el framebuffer (1 KB, `static`) se envía en 8 páginas de 128 bytes; `mtxI2C` se toma y se suelta en **cada página**, así tSensors espera el bus ≈ 3 ms como máximo en vez de los ≈ 24 ms del cuadro completo.
 - Capas: `task_*` (lógica RTOS) → `drv_*` (usa HAL) → HAL. Las tareas no llaman HAL directamente salvo casos triviales.
+- **Bases de tiempo** (todas salen del cristal HSE de 8 MHz, PLL → 168 MHz):
+  - **SysTick**: tick de FreeRTOS cada 1 ms (`configTICK_RATE_HZ = 1000`). De él salen `osDelay`, `osDelayUntil` y todos los timeouts de colas, flags y mutex.
+  - **TIM6**: tick de la HAL (`HAL_GetTick`), también cada 1 ms. Separado de SysTick para que la HAL y el scheduler no compitan.
+  - **TIM4**: no mide tiempo; genera el PWM de 1 kHz del LED RGB.
+  - No se usan *software timers* de FreeRTOS: los tiempos del riego, el bip y el parpadeo salen del timeout de la espera de cada tarea.
 
 ---
 
 ## 7. Configuración CubeMX (checklist)
 
 - **RCC:** HSE = Crystal (8 MHz), LSE opcional. **Clock:** PLL → SYSCLK 168 MHz, AHB 168, APB1 42, APB2 84.
-- **SYS:** Debug = **Serial Wire** (si no, se pierde el ST-Link). Timebase Source = **TIM6** (SysTick queda para FreeRTOS).
+- **SYS:** Debug = **Serial Wire** (si no, se pierde el ST-Link). Timebase Source = **TIM6** (SysTick queda para FreeRTOS). ⚠️ CubeMX 6.18.1 no generó `TIM6_DAC_IRQHandler`: está escrito a mano en `Core/Src/stm32f4xx_it.c`, `USER CODE BEGIN 1` (sin él, el primer tick de `HAL_Init()` cae en `Default_Handler`). Si una regeneración lo crea, el enlazador avisa con *multiple definition* y se borra la copia.
 - **FREERTOS:** CMSIS_V2. `USE_NEWLIB_REENTRANT = Enabled`. Heap_4, `TOTAL_HEAP_SIZE = 32768`. `CHECK_FOR_STACK_OVERFLOW = Option2`. `USE_TRACE_FACILITY = 1`, `INCLUDE_uxTaskGetStackHighWaterMark = 1`. Tareas, colas y mutex de las tablas anteriores (tareas *As weak*).
 - **ADC1:** IN10 (PC0), IN11 (PC1), 12 bits, sample time **480 ciclos** (fuentes de alta impedancia), conversión simple por software.
 - **I2C1:** PB6/PB7, Fast Mode 400 kHz.
 - **TIM4:** CH1–CH3 PWM en PD12–PD14, ~1 kHz, ARR = 999.
 - **USART1:** PA9/PA10 115200 8N1, **DMA TX** (DMA2 Stream7), interrupción global habilitada.
-- **GPIO:** PC6, PC7, PE7–PE11 salida; PA6/PA7 salida (inician en alto = LED apagado); PE3/PE4 EXTI falling + pull-up; PA0 EXTI rising + pull-down.
-- **NVIC:** EXTI0, EXTI3, EXTI4, USART1, DMA con prioridad **≥ 5** (numérica) y marcados "Uses FreeRTOS functions".
-- **Project Manager:** "Generate peripheral initialization as a pair of .c/.h files" = sí. Toolchain STM32CubeIDE.
+- **GPIO:** PC6 (`PUMP_LED`, inicia en bajo) y PC7 (`BUZZER`, activo en alto: debe iniciar en **bajo**; hoy el `.ioc` lo inicia en alto y suena un instante al arrancar, pendiente) como salidas; PE7–PE11 salidas reservadas para trazas (sin uso); PA6/PA7 salida (inician en alto = LED apagado); PE3/PE4 EXTI falling + pull-up (`BTN_K1`, `BTN_K0`); PA0 EXTI rising + pull-down (`BTN_KUP`).
+- **NVIC:** EXTI0, EXTI3 y EXTI4 en prioridad 6; USART1 y DMA2 Stream7 en 5. Todas **≥ 5** (numérica) y marcadas "Uses FreeRTOS functions".
+- **Project Manager:** proyecto `brote` en `firmware/brote/` (`brote.ioc` junto a `App/`). "Generate peripheral initialization as a pair of .c/.h files" = sí. Toolchain STM32CubeIDE. `App/Inc` y `App/` están en las rutas de include y de fuentes del `.cproject`.
 
 ---
 

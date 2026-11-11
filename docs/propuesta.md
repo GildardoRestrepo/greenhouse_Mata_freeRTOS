@@ -22,7 +22,7 @@ estado: borrador para revisar con Marco
 | 5 | Estados | `INIT` → `MONITOREO` ⇄ `RIEGO`, `MANUAL`, `ALARMA` (ver [[arquitectura]]). |
 | 6 | Periféricos | ADC1, I2C1, TIM4 PWM, USART1 (+DMA), GPIO/EXTI, TIM6 como timebase HAL. |
 | 7 | Tareas FreeRTOS | 5 tareas, 5 niveles de prioridad, colas + notificaciones + mutex (ver [[arquitectura]]). |
-| 8 | Demostración | Sacar el sensor del sustrato (o sustrato seco) → el LED de riego da pulsos cortos; mojarlo → para. Desconectar un sensor → alarma. Botones cambian de modo. Analizador lógico/UART muestra la preempción. 5+ min continuos. |
+| 8 | Demostración | Sacar el sensor del sustrato (o sustrato seco) → el LED de riego da pulsos cortos; mojarlo → para. Desconectar un sensor → alarma. Botones cambian de modo. La preempción se muestra con marcas de tiempo por UART (o en el depurador). 5+ min continuos. |
 
 **Cumplimiento de mínimos:** entradas de 3 tipos distintos (analógica ADC, digital I²C, botones GPIO) y salidas de 3 tipos (pantalla, luz —LED RGB por PWM y LED de riego, que cuentan como un solo tipo— y sonido); el mínimo exigido es 2.
 
@@ -86,7 +86,7 @@ Pines elegidos para **no chocar** con lo que la placa ya usa (flash SPI1 en PB0/
 | Botón K_UP (placa) | — | PA0 | GPIO EXTI, pull-down, flanco subida | activo en alto |
 | LEDs D2 / D3 (placa) | — | PA6 / PA7 | GPIO salida | activos en bajo |
 | USB-TTL | RX / TX | **PA9 (TX) / PA10 (RX)** | USART1 115200 8N1 + DMA TX | 3.3 V, conector J6 |
-| Pines de traza (analizador) | 1 por tarea | **PE7–PE11** | GPIO salida | — |
+| Pines de traza (reservados, sin uso) | 1 por tarea | **PE7–PE11** | GPIO salida | — |
 | ST-Link | SWDIO / SWCLK | PA13 / PA14 | SWD | conector JTAG 20p |
 
 ### LED de riego (ocupa el lugar de la bomba)

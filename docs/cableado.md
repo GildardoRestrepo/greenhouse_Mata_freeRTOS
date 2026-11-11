@@ -179,7 +179,7 @@ Van en el conector JTAG de 20 pines de la placa.
 | LEDs D2 / D3 | PA6 / PA7 | activos en bajo |
 
 ## 4. Opcional
-- **Analizador lógico:** pines de traza PE7–PE11 (uno por tarea) y GND, si se quiere la captura de preempción además de la evidencia por UART.
+- **Analizador lógico (no se usa):** PE7–PE11 quedaron reservados como pines de traza, pero el firmware no los escribe.
 
 ## 5. Lista de resistencias
 | Valor | Cantidad | Dónde |
