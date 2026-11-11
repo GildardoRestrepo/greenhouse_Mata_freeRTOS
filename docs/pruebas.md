@@ -39,3 +39,11 @@ Las líneas `SEN …` salen por UART cada 2 s con `SENSORS_LOG_READINGS = 1` (`a
 | P23 | `tDisplay`: OLED desconectada | Quitar la OLED con el sistema andando; reconectarla | Log `DSP OLED perdida` tras ≈ 1 s; **el resto del sistema sigue** (lecturas, riego). Al reconectar, `DSP OLED lista` en ≤ 2 s y la pantalla vuelve sola | | |
 | P24 | `mtxI2C`: bus compartido | 5 min con OLED refrescando y HTU21 midiendo | Ningún error de CRC ni de bus, pantalla sin corrupción; `m=7` todo el tiempo | | |
 | P25 | Pilas de tSensors y tDisplay | Líneas `SEN pila libre=` y `DSP pila libre=` (cada 10 s) tras 5 min | ≥ 64 de 256 palabras (tSensors) y ≥ 96 de 384 (tDisplay), es decir ≥ 25 % libre | | |
+| P26 | `tLogger`: UART por DMA | Reset con el monitor serie abierto (115200 8N1) | Banner `== Brote ...`; cada línea empieza con el tick; nunca aparece `LOG perdidos=` en operación normal; `LOG pila libre=` cada 10 s | | |
+| P27 | `tControl`: arranque | Reset con todo conectado | `CTL inicio, estado INIT` → `CTL INIT->MONITOREO` en ≤ 1 s; LED RGB blanco con un bip y luego verde | | |
+| P28 | `state_machine`: riego automático | Sacar la sonda de la tierra (seco) | `CTL MONITOREO->RIEGO`, `ACT bomba ON` y `ACT bomba OFF` separados 1000 ms; el LED de PC6 se enciende 1 s; RGB azul "respirando"; nuevo pulso cada 16 s mientras siga seco | | |
+| P29 | `state_machine`: riego sin efecto | Dejar la sonda seca durante RIEGO | Tras el 3.er pulso sin que suba ≥ 3 puntos: `CTL RIEGO->ALARMA causa=sin agua`; RGB rojo parpadeando, bip cada 2 s, PC6 apagado | | |
+| P30 | Botones y preempción | En MONITOREO: K_UP, luego K1 dos veces, luego K_UP; K0 varias veces | `CTL MONITOREO->MANUAL`; cada K1 da un pulso (ignorado si hay uno en curso); `CTL MANUAL->MONITOREO`; K0 rota pantallas. En cada botón `t - t_isr` ≤ 1 ms aunque tDisplay esté dibujando | | |
+| P31 | Reconocer alarma | En ALARMA "suelo" (quitar AO), pulsar K1; reconectar AO y pulsar K1 | Primer K1: solo un bip, sigue en ALARMA; segundo K1: `CTL ALARMA->MONITOREO` | | |
+| P32 | Timeout de sensores | Pausar tSensors en el depurador (o hacer que no arranque) > 3 s | `CTL MONITOREO->ALARMA causa=timeout`; la bomba queda bloqueada | | |
+| P33 | Pilas de tControl, tActuators y tLogger | Líneas `CTL/ACT/LOG pila libre=` tras 5 min | ≥ 25 % libre en cada una | | |

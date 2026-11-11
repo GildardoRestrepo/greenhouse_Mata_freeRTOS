@@ -16,6 +16,27 @@ Entradas nuevas **arriba**. Formato: fecha · quién · hecho · pendiente · de
 - **Hecho además:** `docs/cableado.md` (diagrama y lista de conexiones para armar, a partir de [[propuesta]] §3) y P19 reescrita.
 - **Pendiente:** compilar (el cambio no se ha compilado: este PC no tiene toolchain) y ejecutar P19 y P20 en la placa.
 
+## 2026-11-10 · ESTEVAN (+ Claude) — revisión de PRs y módulos de control (rama `feat/control-actuadores`)
+- **PRs de Marco:** #2 (BOM reducido) y #3 (HTU21) revisados, aprobados y mergeados en `main`. Observaciones que quedaron en los PR: P19 fallará tal como está escrita (en los ciclos de aire `EV_READING` sale ≈ 75 ms después de despertar) y, al calibrar la YL-69 (P16), el crudo "mojado" debe quedar holgado sobre `SOIL_RAW_MIN`.
+- **Hecho (todo en `firmware/brote/App`):**
+  - `task_logger` (`StartLoggerTask`, `log_printf`, `log_msg_t`): formatea en la pila de quien llama, encola en `qLog` con timeout 0 (cuenta los perdidos) y envía por **DMA**; se bloquea en un thread flag que pone `HAL_UART_TxCpltCallback`.
+  - `state_machine` (pura, sin HAL ni RTOS): `sm_init` / `sm_step` → nuevo estado + máscara de acciones. Autotest de INIT = primera lectura con suelo válido.
+  - `task_control` (`StartControlTask`): consume `qEvents`, alimenta la máquina, publica `g_snapshot`, manda órdenes a tActuators y detecta el timeout de sensores con el timeout de la cola. Aquí está `HAL_GPIO_EXTI_Callback` (antirrebote 50 ms, `osMessageQueuePut` con timeout 0).
+  - `task_actuators` (`StartActuatorsTask`, `act_send`): órdenes como thread flags (`CMD_PUMP_PULSE/STOP/BEEP/LED_STATE`); corta el pulso por su propio timeout; RGB por estado (blanco, verde, azul que respira, ámbar, rojo parpadeando) y bip cada 2 s en ALARMA.
+  - `drv_outputs`: LED de riego PC6, buzzer PC7 (activo en bajo), RGB por TIM4 CH1–CH3.
+  - **Compila sin errores ni warnings** (solo `-fsyntax-only`, con el ARM GCC de CubeIDE, la HAL y FreeRTOS 10.3.1 del repositorio de Cube y cabeceras simuladas para `main.h`/`i2c.h`/`adc.h`/`tim.h`/`usart.h`). Incluye el código de Marco. Falta el enlazado real con el proyecto generado.
+- **INTERFAZ:**
+  - `app_config.h`: **`TASK_ACTUATORS_STACK_WORDS` 128 → 256** (log_printf usa vsnprintf en la pila de quien llama; actualizado en [[arquitectura]] §2). Constantes nuevas: `TEMP_HYST_cC`, `SOIL_RISE_MIN_PCT`, `ACT_*`, `ALARM_*`, `RGB_*`, `LOG_TX_TIMEOUT_MS`. Se corrigió el comentario "capacitivo" de la calibración de suelo.
+  - En el `.ioc`: cola `qLog` con Item Size `log_msg_t`; handles que usa el código: `qLogHandle`, `tLoggerHandle`, `tActuatorsHandle` (además de los de Marco).
+  - En `freertos.c` (USER CODE): `#include "app_types.h"`, `#include "task_logger.h"`, `#include "task_actuators.h"`, y en el cuerpo de `vApplicationStackOverflowHook` la línea `act_fatal_stack_overflow();`.
+- **Decisiones:**
+  - Fallo del aire → ALARMA (no "seguir regando"): así P08 es observable y explicable.
+  - Riego sin efecto: se cuenta un pulso "sin subida" si tras `PUMP_PULSE_MS + SOAK_MS` la humedad no subió `SOIL_RISE_MIN_PCT`; al 3.º → ALARMA "sin agua".
+  - Para reconocer una alarma con K1 la causa debe estar resuelta (la de "sin agua" siempre se puede reconocer).
+  - `EV_BTN_KUP_LONG` no se usa por ahora (PA0 solo con flanco de subida).
+- **Pendiente:** crear el `.ioc` y el proyecto base; compilar y enlazar; pruebas P26–P33; hooks de traza `traceTASK_SWITCHED_IN/OUT` para el analizador (opcional, la evidencia por UART ya está en P30).
+- **Problemas:** —
+
 ## 2026-11-10 · MARCO (+ Claude) — el sensor de aire pasa de SHT30 a HTU21 (GY-21), rama `feat/htu21`
 - **Motivo:** no había SHT30 en la tienda; se compró el **HTU21D en módulo GY-21**.
 - **INTERFAZ (cambian el archivo y las funciones del driver):** `drv_sht30.*` → **`drv_htu21.*`**, prefijo `sht30_` → **`htu21_`**. Ya no existe `sht30_read(&t, &h)`: ahora son `htu21_read_temp(&temp_cC)` y `htu21_read_hum(&hum_cPct)` por separado, más `htu21_init()`. Estados `HTU21_OK / ERR_MUTEX / ERR_BUS / ERR_CRC`. Gildardo: si `task_control.c`, el autotest de INIT o algún documento tuyo nombran `sht30_*` o la dirección 0x44, hay que cambiarlos.

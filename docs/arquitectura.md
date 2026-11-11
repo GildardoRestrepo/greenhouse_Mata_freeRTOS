@@ -57,7 +57,7 @@ flowchart LR
 
 | Tarea | Responsabilidad | Prioridad (CMSIS) | Activación | Pila (palabras) | Recursos compartidos |
 |---|---|---|---|---|---|
-| `tActuators` | Encender/apagar bomba con **tiempo máximo**; patrones de buzzer; color del LED RGB según estado | `osPriorityHigh` | Evento: notificación desde `tControl`. Timeout de la espera = fin del pulso de riego | 128 | GPIO PC6/PC7, TIM4 (solo ella) |
+| `tActuators` | Encender/apagar bomba con **tiempo máximo**; patrones de buzzer; color del LED RGB según estado | `osPriorityHigh` | Evento: notificación desde `tControl`. Timeout de la espera = fin del pulso de riego | 256 | GPIO PC6/PC7, TIM4 (solo ella) |
 | `tControl` | Máquina de estados, umbrales con histéresis, detección de errores, decide riego | `osPriorityAboveNormal` | Evento: `qEvents` (lecturas, botones, fin de riego). Timeout 1 s para detectar sensores mudos | 256 | escribe `g_snapshot` (mtxData) |
 | `tSensors` | Leer ADC (suelo, LDR) con promedio, leer HTU21 (con CRC), validar rangos | `osPriorityNormal` | Periódica **500 ms** (`osDelayUntil`); HTU21 cada 4 ciclos (2 s) | 256 | I2C1 (mtxI2C) |
 | `tDisplay` | Dibujar pantallas en la OLED | `osPriorityBelowNormal` | Periódica **250 ms** | 384 | I2C1 (mtxI2C), lee `g_snapshot` (mtxData) |
@@ -84,7 +84,7 @@ flowchart LR
 | Objeto | Tipo | Productores → Consumidor | Dato | Por qué este mecanismo |
 |---|---|---|---|---|
 | `qEvents` | Cola, 8 × `app_event_t` | tSensors, tActuators, ISR botones → **tControl** | lectura nueva, botón, fin de riego, fallo | Varios productores, un consumidor; serializa todo lo que cambia el estado → la máquina de estados no necesita locks. ISR-safe (`osMessageQueuePut` con timeout 0). |
-| notificación de `tActuators` | Task notification (valor = comando) | **tControl** → tActuators | `CMD_PUMP_PULSE`, `CMD_PUMP_STOP`, `CMD_BEEP`, `CMD_LED_STATE` | Un solo consumidor conocido; más rápida y liviana que una cola. El timeout de la espera sirve como temporizador del pulso. |
+| notificación de `tActuators` | Thread flags de CMSIS-RTOS v2 (= task notification de FreeRTOS; un bit por comando) | **tControl** → tActuators | `CMD_PUMP_PULSE`, `CMD_PUMP_STOP`, `CMD_BEEP`, `CMD_LED_STATE` | Un solo consumidor conocido; más rápida y liviana que una cola. El timeout de la espera sirve como temporizador del pulso. |
 | `qLog` | Cola, 16 × `log_msg_t` (64 B) | todas → **tLogger** | texto con timestamp | Desacopla: nadie se bloquea esperando la UART. |
 | `mtxI2C` | Mutex (herencia de prioridad) | tSensors, tDisplay | acceso al bus I2C1 | Dos tareas usan el mismo bus; una transacción a medias corrompe ambas. Mutex (no semáforo) por la herencia de prioridad. |
 | `mtxData` | Mutex | tControl (escribe), tDisplay y tLogger (leen) | `g_snapshot` (estado + últimas lecturas) | Estructura de varios campos: sin protección la pantalla podría mostrar mezcla de lecturas viejas y nuevas. |
