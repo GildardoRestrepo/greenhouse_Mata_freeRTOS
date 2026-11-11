@@ -8,6 +8,18 @@ Entradas nuevas **arriba**. Formato: fecha · quién · hecho · pendiente · de
 
 ---
 
+## 2026-11-11 · MARCO y ESTEVAN (+ Claude) — primera prueba en la placa, calibración y buzzer
+- **Hecho:** proyecto corriendo en la placa con todo conectado. Calibración medida con el depurador (breakpoint en la línea `SEN` de `task_sensors.c`): suelo aire = 3604, agua = 1187; LDR tapada = 987, linterna = 3531. Valores en `app_config.h` (**archivo compartido**). Probados en la placa riego automático (P04) y alarma "sin agua" (P06).
+- **INTERFAZ:** el buzzer es **activo en alto**, no en bajo. `out_buzzer()` en `drv_outputs.c`: sonar = `GPIO_PIN_SET`. Corregidos `propuesta.md`, `cableado.md`, `bom.md` y el `README`.
+- **Problemas (sirven para "problema técnico resuelto"):**
+  - *Buzzer sonando siempre.* VCC ya estaba a 3V3. Se soltó el cable de señal y se llevó a 3V3 (seguía sonando) y a GND (se calló): el módulo es de disparo en alto. Solución: invertir el nivel en `out_buzzer()`.
+  - *"`osKernelStart()` retorna".* Era falso: se estaba depurando otro proyecto (`LASD9`), porque el botón de debug relanza la última configuración. Pista: los números de línea de `main.c` en la consola no coincidían con los de `brote`. El heap no era el problema: se usan ≈ 8,7 KB de 32 KB, e Idle y Timers son estáticos.
+- **Decisiones:** sin adaptador USB-TTL, las lecturas se toman con el depurador (`g_snapshot` y `s_tx_buf` en la vista Expressions).
+- **Pendiente:**
+  - Estevan (CubeMX): PC7 *GPIO output level* = **Low**. Hoy el `.ioc` lo inicia en alto y el buzzer suena un instante en cada arranque.
+  - Conseguir un USB-TTL (o un Arduino como puente) para P01, P19 y P26; sin él no se puede mostrar la telemetría por UART.
+  - Pruebas que faltan: sensor de suelo desconectado (P07), preempción (P10), estabilidad y pilas (P11, P12).
+
 ## 2026-11-10 · MARCO (+ Claude) — arreglo de P19 y diagrama de cableado (rama `fix/p19-y-cableado`)
 - **PR #4 de Estevan** (proyecto base + control, actuadores y logger): revisados los puntos de integración con sensores y pantalla y **aprobado**. De acuerdo con que el fallo de aire pase a ALARMA.
 - **Problema (lo detectó Estevan al revisar el PR #3):** con el HTU21, en los ciclos de aire `EV_READING` salía ≈ 75 ms después de despertar, porque tSensors medía el aire antes de enviar. P19 (un evento cada 500 ms ± 1 ms) habría fallado uno de cada cuatro ciclos.
