@@ -234,4 +234,18 @@ void DMA2_Stream7_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 
+/*
+ * Interrupción de TIM6, la base de tiempo de la HAL (HAL_GetTick). CubeMX 6.18.1 no
+ * la generó aunque SYS -> Timebase Source = TIM6 (el .ioc no trae la entrada
+ * NVIC.TIM6_DAC_IRQn), y sin ella el primer tick caía en Default_Handler dentro de
+ * HAL_Init(). Si una regeneración futura sí crea esta función, borrar esta copia
+ * (el enlazador avisará con "multiple definition").
+ */
+extern TIM_HandleTypeDef htim6;
+
+void TIM6_DAC_IRQHandler(void)
+{
+  HAL_TIM_IRQHandler(&htim6);   /* -> HAL_TIM_PeriodElapsedCallback -> HAL_IncTick */
+}
+
 /* USER CODE END 1 */
