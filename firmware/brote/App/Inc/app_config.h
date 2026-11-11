@@ -103,14 +103,14 @@
 #define ANALOG_NUM_SAMPLES          8U      /* muestras promediadas por lectura */
 #define ANALOG_CONV_TIMEOUT_MS      2U      /* timeout HAL por conversión (dura ≈ 25 µs) */
 
-/* Calibración de la sonda resistiva YL-69 (seco = crudo alto). PROVISIONAL: medir en P16. */
-#define SOIL_RAW_DRY                2600U   /* crudo en aire  → 0 %  */
-#define SOIL_RAW_WET                1300U   /* crudo en agua  → 100 % */
+/* Calibración de la sonda resistiva YL-69 (seco = crudo alto). Medido en P16 (2026-11-11). */
+#define SOIL_RAW_DRY                3604U   /* crudo en aire  → 0 %  */
+#define SOIL_RAW_WET                1187U   /* crudo en agua  → 100 % */
 #define SOIL_RAW_MIN                200U    /* por debajo: desconectado (pull-down 100 kΩ) */
 
-/* LDR arriba (a 3V3) y 10 kΩ a GND: más luz = más voltaje. PROVISIONAL. */
-#define LIGHT_RAW_DARK              100U    /* crudo a oscuras → 0 %  */
-#define LIGHT_RAW_BRIGHT            3800U   /* crudo con luz fuerte → 100 % */
+/* LDR arriba (a 3V3) y 10 kΩ a GND: más luz = más voltaje. Medido en P17 (2026-11-11). */
+#define LIGHT_RAW_DARK              987U    /* crudo a oscuras → 0 %  */
+#define LIGHT_RAW_BRIGHT            3531U   /* crudo con luz fuerte → 100 % */
 
 /* ======================================================================== */
 /* OLED SSD1306 y tDisplay                                                  */
