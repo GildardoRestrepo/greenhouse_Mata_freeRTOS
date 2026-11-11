@@ -8,6 +8,14 @@ Entradas nuevas **arriba**. Formato: fecha · quién · hecho · pendiente · de
 
 ---
 
+## 2026-11-10 · MARCO (+ Claude) — arreglo de P19 y diagrama de cableado (rama `fix/p19-y-cableado`)
+- **PR #4 de Estevan** (proyecto base + control, actuadores y logger): revisados los puntos de integración con sensores y pantalla y **aprobado**. De acuerdo con que el fallo de aire pase a ALARMA.
+- **Problema (lo detectó Estevan al revisar el PR #3):** con el HTU21, en los ciclos de aire `EV_READING` salía ≈ 75 ms después de despertar, porque tSensors medía el aire antes de enviar. P19 (un evento cada 500 ms ± 1 ms) habría fallado uno de cada cuatro ciclos.
+- **Solución:** `task_sensors.c` ahora envía `EV_READING` justo después de los analógicos y mide el HTU21 **después**. El dato nuevo del aire viaja en el evento del ciclo siguiente (500 ms más tarde, irrelevante para temperatura y humedad).
+- **INTERFAZ (contrato de tSensors, [[arquitectura]] §3):** no cambian tipos ni nombres. Cambia el orden: `EV_SENSOR_FAULT` con `FAULT_AIR` puede llegar hasta 500 ms **antes** que el primer `EV_READING` con el bit de aire apagado, y el primer evento tras el arranque llega sin dato de aire.
+- **Hecho además:** `docs/cableado.md` (diagrama y lista de conexiones para armar, a partir de [[propuesta]] §3) y P19 reescrita.
+- **Pendiente:** compilar (el cambio no se ha compilado: este PC no tiene toolchain) y ejecutar P19 y P20 en la placa.
+
 ## 2026-11-10 · ESTEVAN (+ Claude) — revisión de PRs y módulos de control (rama `feat/control-actuadores`)
 - **PRs de Marco:** #2 (BOM reducido) y #3 (HTU21) revisados, aprobados y mergeados en `main`. Observaciones que quedaron en los PR: P19 fallará tal como está escrita (en los ciclos de aire `EV_READING` sale ≈ 75 ms después de despertar) y, al calibrar la YL-69 (P16), el crudo "mojado" debe quedar holgado sobre `SOIL_RAW_MIN`.
 - **Hecho (todo en `firmware/brote/App`):**

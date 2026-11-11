@@ -68,6 +68,8 @@ Lista reducida del 2026-11-10 (presupuesto ajustado). Links y precios exactos en
 
 ## 3. Conexiones (placa negra STM32_F4VE)
 
+Diagrama y lista de conexiones paso a paso para armar: [[cableado]].
+
 Pines elegidos para **no chocar** con lo que la placa ya usa (flash SPI1 en PB0/PB3-5, SD en PC8-12/PD2, LEDs en PA6/PA7, botones en PA0/PE3/PE4, USB en PA11/12, SWD en PA13/14).
 
 | Periférico | Señal | Pin STM32 | Recurso | Alimentación / nivel |
