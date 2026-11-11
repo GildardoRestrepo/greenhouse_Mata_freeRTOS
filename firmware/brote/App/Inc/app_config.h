@@ -24,7 +24,7 @@
 #define TASK_DISPLAY_PRIO           osPriorityBelowNormal
 #define TASK_LOGGER_PRIO            osPriorityLow
 
-#define TASK_ACTUATORS_STACK_WORDS  128U
+#define TASK_ACTUATORS_STACK_WORDS  256U   /* 256: log_printf usa vsnprintf en la pila */
 #define TASK_CONTROL_STACK_WORDS    256U
 #define TASK_SENSORS_STACK_WORDS    256U
 #define TASK_DISPLAY_STACK_WORDS    384U
@@ -56,9 +56,26 @@
 #define MAX_PULSES_NO_RISE          3U      /* pulsos sin subir la humedad → alarma "sin agua" */
 #define SENSOR_TIMEOUT_MS           3000U   /* sin lecturas → alarma "timeout" */
 #define TEMP_MAX_cC                 3500    /* centésimas de °C: sobrecalentamiento */
+#define TEMP_HYST_cC                200     /* la alarma de temperatura se reconoce bajo MAX - HYST */
+#define SOIL_RISE_MIN_PCT           3       /* subida mínima tras un pulso para contar como "sirvió" */
 
 #define BTN_DEBOUNCE_MS             50U     /* antirrebote en la ISR */
 #define BTN_LONG_MS                 1000U   /* pulsación larga de K_UP */
+
+/* ======================================================================== */
+/* tActuators: buzzer y LED RGB                                             */
+/* ======================================================================== */
+#define ACT_ANIM_PERIOD_MS          20U     /* paso de animación del RGB (timeout de la espera) */
+#define ACT_BEEP_MS                 120U    /* duración de un bip */
+#define ALARM_BEEP_PERIOD_MS        2000U   /* en ALARMA: un bip cada 2 s */
+#define ALARM_BLINK_MS              500U    /* en ALARMA: rojo 0,5 s encendido / 0,5 s apagado */
+#define RGB_BREATH_PERIOD_MS        2000U   /* en RIEGO: periodo del azul que "respira" */
+#define RGB_LEVEL_PERMIL            600U    /* brillo máximo del RGB (milésimas) */
+
+/* ======================================================================== */
+/* tLogger                                                                  */
+/* ======================================================================== */
+#define LOG_TX_TIMEOUT_MS           50U     /* máx. por mensaje: 66 B a 115200 ≈ 6 ms */
 
 /* ======================================================================== */
 /* tSensors: validación y fallos                                            */
@@ -86,7 +103,7 @@
 #define ANALOG_NUM_SAMPLES          8U      /* muestras promediadas por lectura */
 #define ANALOG_CONV_TIMEOUT_MS      2U      /* timeout HAL por conversión (dura ≈ 25 µs) */
 
-/* Calibración del sensor capacitivo. PROVISIONAL: medir en P03 con el sustrato real. */
+/* Calibración de la sonda resistiva YL-69 (seco = crudo alto). PROVISIONAL: medir en P16. */
 #define SOIL_RAW_DRY                2600U   /* crudo en aire  → 0 %  */
 #define SOIL_RAW_WET                1300U   /* crudo en agua  → 100 % */
 #define SOIL_RAW_MIN                200U    /* por debajo: desconectado (pull-down 100 kΩ) */
